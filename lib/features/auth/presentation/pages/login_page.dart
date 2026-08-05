@@ -14,7 +14,6 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
-  // WAJIB ADA: Mencegah memory leak
   @override
   void dispose() {
     _emailController.dispose();
@@ -27,7 +26,6 @@ class _LoginPageState extends State<LoginPage> {
     return Scaffold(
       backgroundColor: AppColors.background, // Kasih warna background dasar
       body: SafeArea(
-        // PENYELAMAT KEYBOARD: SingleChildScrollView
         child: SingleChildScrollView(
           child: SizedBox(
             width: double.infinity, 
@@ -129,8 +127,7 @@ class _LoginPageState extends State<LoginPage> {
                           CustomButton(
                             text: "Login", 
                             onPressed: (){
-                              print("Email: ${_emailController.text}");
-                               print("pw: ${_passwordController.text}");
+                              Navigator.pushNamed(context, '/dashboard');
                             }
                           ),                  
                         ],

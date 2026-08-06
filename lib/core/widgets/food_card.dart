@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-// Jangan lupa import FoodModel lu di sini
 import '../models/food_model.dart';
 
 
@@ -28,7 +27,6 @@ class FoodCard extends StatelessWidget {
       clipBehavior: Clip.hardEdge,
       child: Column(
         children: [
-          // --- SETENGAH ATAS: GAMBAR ---
           Expanded(
             child: SizedBox(
               width: double.infinity,
@@ -36,7 +34,7 @@ class FoodCard extends StatelessWidget {
                 children: [
                   Positioned.fill(
                     child: Image.asset(
-                      food.imagePath, // 1. Datanya ngambil dari model
+                      food.imagePath,
                       fit: BoxFit.cover,
                     ),
                   ),
@@ -61,7 +59,6 @@ class FoodCard extends StatelessWidget {
             ),
           ),
 
-          // --- SETENGAH BAWAH: TEKS ---
           Expanded(
             child: Container(
               width: double.infinity,
@@ -71,7 +68,7 @@ class FoodCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    food.name, // 2. Nama ngambil dari model
+                    food.name,
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 15, 
@@ -83,7 +80,7 @@ class FoodCard extends StatelessWidget {
                     children: [
                       Flexible(
                         child: Text(
-                          food.category, // 3. Kategori ngambil dari model
+                          food.category,
                           style: const TextStyle(
                             fontWeight: FontWeight.normal,
                             fontSize: 10,
@@ -93,7 +90,7 @@ class FoodCard extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        " • ${food.time}", // 4. Waktu ngambil dari model
+                        " • ${food.time}",
                         style: const TextStyle(
                           fontWeight: FontWeight.normal,
                           fontSize: 10,
@@ -105,7 +102,7 @@ class FoodCard extends StatelessWidget {
                   Row(
                     children: [
                       Text(
-                        "Rp ${food.price}", // 5. Harga ngambil dari model
+                        "Rp ${food.price}",
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 14,

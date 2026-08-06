@@ -14,7 +14,6 @@ class FoodModel {
   });
 }
 
-// Ini Data Dummy-nya (Nanti ini yang bakal diganti sama respon dari API/Database)
 List<FoodModel> dummyFoods = [
   FoodModel(
     imagePath: "assets/images/sate.jpg",
@@ -24,14 +23,14 @@ List<FoodModel> dummyFoods = [
     price: 20000,
   ),
   FoodModel(
-    imagePath: "assets/images/promo1.jpg", // Pakai gambar yang lu punya dulu
+    imagePath: "assets/images/promo1.jpg",
     name: "Truffle Pasta",
     category: "Italian Food",
     time: "25 Min",
     price: 45000,
   ),
   FoodModel(
-    imagePath: "assets/images/sate.jpg", // Dummy
+    imagePath: "assets/images/sate.jpg",
     name: "Nasi Goreng",
     category: "Indonesian Food",
     time: "15 Min",

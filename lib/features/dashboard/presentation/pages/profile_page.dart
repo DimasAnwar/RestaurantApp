@@ -1,10 +1,6 @@
 import 'package:flutter/material.dart';
-// Import file AppColors global kamu
 import 'package:restauran_app/core/theme/app_colors.dart';
 
-// -------------------------------------------------------------------------
-// MODEL DATA (dummy)
-// -------------------------------------------------------------------------
 class UserProfile {
   final String name;
   final String tier;
@@ -35,9 +31,6 @@ class RewardOption {
   });
 }
 
-// -------------------------------------------------------------------------
-// MAIN PROFILE PAGE
-// -------------------------------------------------------------------------
 class ProfilePage extends StatelessWidget {
   const ProfilePage({Key? key}) : super(key: key);
 
@@ -53,7 +46,6 @@ class ProfilePage extends StatelessWidget {
     );
 
     return Scaffold(
-      // Menggunakan background dari ThemeData atau default transparan
       backgroundColor: const Color(0xFFFAF8F5),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -80,10 +72,6 @@ class ProfilePage extends StatelessWidget {
   }
 }
 
-// -------------------------------------------------------------------------
-// WIDGET KOMPONEN
-// -------------------------------------------------------------------------
-
 class _ProfileAppBar extends StatelessWidget {
   const _ProfileAppBar({Key? key}) : super(key: key);
 
@@ -104,7 +92,7 @@ class _ProfileAppBar extends StatelessWidget {
           onPressed: () {},
           icon: Icon(
             Icons.notifications_none_rounded,
-            color: AppColors.primary, // Menggunakan AppColors.primary dari tema
+            color: AppColors.primary,
             size: 28,
           ),
           padding: EdgeInsets.zero,
@@ -215,7 +203,7 @@ class _PointsCard extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 32,
                       fontWeight: FontWeight.bold,
-                      color: AppColors.primary, // Diselaraskan ke AppColors.primary
+                      color: AppColors.primary,
                     ),
                   ),
                 ],
@@ -223,7 +211,7 @@ class _PointsCard extends StatelessWidget {
               ElevatedButton(
                 onPressed: () {},
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary, // Diselaraskan ke AppColors.primary
+                  backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
                   elevation: 0,
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
@@ -255,7 +243,7 @@ class _PointsCard extends StatelessWidget {
             child: LinearProgressIndicator(
               value: progress,
               backgroundColor: Colors.grey[200],
-              valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary), // Diselaraskan
+              valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
               minHeight: 8,
             ),
           ),
@@ -285,7 +273,7 @@ class _RewardsSection extends StatelessWidget {
               onPressed: () {},
               child: Text(
                 'View All',
-                style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600), // Diselaraskan
+                style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600),
               ),
             ),
           ],

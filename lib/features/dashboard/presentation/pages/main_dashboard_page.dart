@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-// Pastikan variabel 'primary' benar-benar ada di dalam file ini
 import 'package:restauran_app/core/theme/app_colors.dart'; 
 import '../../../home/presentation/pages/home_page.dart';
 import '../pages/profile_page.dart';
@@ -16,10 +15,9 @@ class MainDashboardPage extends StatefulWidget {
 class _MainDashboardPageState extends State<MainDashboardPage> {
   int _currentIndex = 0;
   
-  // PERBAIKAN: Disesuaikan menjadi 4 item agar sinkron dengan Navbar
   final List<Widget> _pages = [
-    const HomePage(), // Pastikan HomePage memiliki const constructor jika memungkinkan
-    const SearchPage(), // Nanti bisa diganti dengan ProfilePage yang kita buat sebelumnya
+    const HomePage(),
+    const SearchPage(),
     const OrderPage(),
     const ProfilePage(),
   ];
@@ -31,7 +29,7 @@ class _MainDashboardPageState extends State<MainDashboardPage> {
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         type: BottomNavigationBarType.fixed,
-        selectedItemColor: AppColors.primary, // Pastikan 'primary' ada di AppColors
+        selectedItemColor: AppColors.primary,
         elevation: 20,
         onTap: (int indexBaru) {
           setState(() {

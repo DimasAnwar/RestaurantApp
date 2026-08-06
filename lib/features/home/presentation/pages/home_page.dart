@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
+import 'package:supabase_flutter/supabase_flutter.dart'; 
+
 import 'package:restauran_app/core/theme/app_colors.dart';
 import '../../../../core/widgets/custom_input.dart';
-
-// KUNCI: Import file model dan custom widget yang udah lu bikin
-import '../../../../core/models/food_model.dart'; // Sesuaikan jumlah '../' dengan posisi folder lu
-import '../../../../core/widgets/food_card.dart'; // Sesuaikan jumlah '../' dengan posisi folder lu
+import '../../../../core/models/food_model.dart'; 
+import '../../../../core/widgets/food_card.dart'; 
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -15,6 +18,106 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final TextEditingController _searchController = TextEditingController();
+
+  // --- STATE LOKASI ---
+  String _currentAddress = "Mencari lokasi...";
+  
+  // --- STATE PROFILE ---
+  String _userName = "User"; // Default sebelum ditarik dari DB
+  String? _profileImageUrl; 
+
+  // --- STATE MICROPHONE ---
+  late stt.SpeechToText _speech;
+  bool _isListening = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _speech = stt.SpeechToText();
+    _getCurrentLocation();
+    _getUserData(); 
+  }
+
+  // --- FUNGSI TARIK DATA DARI SUPABASE ---
+  void _getUserData() {
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user != null) {
+      setState(() {
+        _userName = user.userMetadata?['username'] ?? "User";
+        _profileImageUrl = user.userMetadata?['avatar_url']; 
+      });
+    }
+  }
+
+  // --- FUNGSI AMBIL LOKASI REALTIME (DISESUAIKAN KE GEOLOCATOR v14) ---
+  Future<void> _getCurrentLocation() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    try {
+      serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        if (mounted) setState(() => _currentAddress = "GPS tidak aktif");
+        return;
+      }
+
+      permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          if (mounted) setState(() => _currentAddress = "Izin lokasi ditolak");
+          return;
+        }
+      }
+      
+      if (permission == LocationPermission.deniedForever) {
+        if (mounted) setState(() => _currentAddress = "Izin lokasi diblokir permanen");
+        return;
+      }
+
+      // PERUBAHAN UTAMA: Menggunakan LocationSettings untuk geolocator v14+
+      LocationSettings locationSettings = const LocationSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 100,
+      );
+      final Geocoding geocoding = Geocoding();
+      Position position = await Geolocator.getCurrentPosition(locationSettings: locationSettings);
+     final List<Placemark> placemarks = await geocoding.placemarkFromCoordinates(52.2165157, 6.9437819);
+      
+      if (placemarks.isNotEmpty) {
+      Placemark place = placemarks[0];
+        if (mounted) {
+          setState(() {
+            _currentAddress = "${place.locality}, ${place.administrativeArea}"; 
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint("Error Get Location: $e");
+      if (mounted) setState(() => _currentAddress = "Gagal memuat alamat");
+    }
+  }
+
+  // --- FUNGSI SPEECH TO TEXT (MIC) ---
+  void _listen() async {
+    if (!_isListening) {
+      bool available = await _speech.initialize(
+        onStatus: (val) => debugPrint('onStatus: $val'),
+        onError: (val) => debugPrint('onError: $val'),
+      );
+      if (available) {
+        setState(() => _isListening = true);
+        _speech.listen(
+          onResult: (val) => setState(() {
+            _searchController.text = val.recognizedWords;
+          }),
+        );
+      }
+    } else {
+      setState(() => _isListening = false);
+      _speech.stop();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -27,52 +130,68 @@ class _HomePageState extends State<HomePage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 
-                // --- HEADER LOKASI ---
+                // --- HEADER LOKASI & PROFILE ---
                 Row(
                   children: [
                     Icon(Icons.place, color: AppColors.primary),
                     const SizedBox(width: 4),
-                    const Text(
-                      "Current Location",
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                    const Spacer(),
-                    ClipOval(
-                      child: Image.asset(
-                        "assets/images/sate.jpg",
-                        width: 45, height: 45, fit: BoxFit.cover,
+                    Expanded(
+                      child: Text(
+                        _currentAddress,
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
+                    ),
+                    ClipOval(
+                      child: _profileImageUrl != null 
+                        ? Image.network( 
+                            _profileImageUrl!,
+                            width: 45, height: 45, fit: BoxFit.cover,
+                          )
+                        : Image.asset( 
+                            "assets/images/default_profile.png", 
+                            width: 45, height: 45, fit: BoxFit.cover,
+                          ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 20),
 
-                // --- SAPAAN ---
-                const Text(
-                  "Hello Dimas",
-                  style: TextStyle(fontSize: 33, fontWeight: FontWeight.bold),
+                // --- SAPAAN DINAMIS ---
+                Text(
+                  "Hello $_userName", 
+                  style: const TextStyle(fontSize: 33, fontWeight: FontWeight.bold),
                 ),
                 const Text(
                   "What are you Eating Today?",
                   style: TextStyle(fontSize: 16, color: Colors.grey),
                 ),
                 const SizedBox(height: 20),
-
-                // --- SEARCH BAR ---
+                
+                // --- SEARCH BAR & MIC ---
                 Row(
                   children: [
                     Expanded(
                       child: CustomInput(
-                        icon: Icons.search, 
-                        label: "Search",
+                        label: "Search", 
                         hint: "Search for food, drinks etc.",
                         controller: _searchController,
+                        isPassword: false,
                       ),
                     ),
                     const SizedBox(width: 8),
-                    IconButton(
-                      onPressed: () {},
-                      icon: const Icon(Icons.mic, size: 32),
+                    GestureDetector(
+                      onTap: _listen,
+                      child: CircleAvatar(
+                        radius: 24,
+                        backgroundColor: _isListening ? Colors.red : AppColors.primary.withOpacity(0.1),
+                        child: Icon(
+                          _isListening ? Icons.mic : Icons.mic_none, 
+                          size: 28, 
+                          color: _isListening ? Colors.white : AppColors.primary,
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -165,29 +284,27 @@ class _HomePageState extends State<HomePage> {
                 ),
                 const SizedBox(height: 5),
 
-                // --- LIST MAKANAN (MEMANGGIL CUSTOM WIDGET) ---
+                // --- LIST MAKANAN (CUSTOM WIDGET) ---
                 SizedBox(
                   height: 240, 
                   child: ListView.separated(
                     scrollDirection: Axis.horizontal, 
-                    // dummyFoods ini otomatis kebaca dari file food_model.dart yang udah di-import
                     itemCount: dummyFoods.length, 
                     separatorBuilder: (context, index) => const SizedBox(width: 16), 
                     itemBuilder: (context, index) {
-                      // Manggil cetakan custom widget yang ada di food_card.dart
                       return FoodCard(food: dummyFoods[index]); 
                     },
                   ),
                 )
-                
-              ],
-            ),
-          ),
-        ),
-      ),
+              ]
+            )
+          )
+        )
+      )
     );
   }
 
+  // --- WIDGET MENU KATALOG KECIL ---
   Widget _buildKatalogMenu(IconData icon, String title) {
     return Column(
       children: [

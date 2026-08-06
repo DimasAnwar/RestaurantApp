@@ -1,10 +1,6 @@
 import 'package:flutter/material.dart';
-// Pastikan import ini mengarah ke file tema global kamu
 import 'package:restauran_app/core/theme/app_colors.dart'; 
 
-// -------------------------------------------------------------------------
-// MODEL DATA (dummy)
-// -------------------------------------------------------------------------
 class OrderData {
   final String restaurantName;
   final String date;
@@ -31,15 +27,11 @@ class OrderData {
   });
 }
 
-// -------------------------------------------------------------------------
-// MAIN ORDER PAGE
-// -------------------------------------------------------------------------
 class OrderPage extends StatelessWidget {
   const OrderPage({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    // Data Dummy
     final List<OrderData> activeOrders = [
       OrderData(
         restaurantName: 'Artisan Coffee Co.',
@@ -81,9 +73,9 @@ class OrderPage extends StatelessWidget {
     ];
 
     return DefaultTabController(
-      length: 2, // Jumlah Tab
+      length: 2,
       child: Scaffold(
-        backgroundColor: const Color(0xFFFAF8F5), // Warna background krem muda
+        backgroundColor: const Color(0xFFFAF8F5),
         body: SafeArea(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -100,7 +92,6 @@ class OrderPage extends StatelessWidget {
                   ),
                 ),
               ),
-              // Tab Bar Section
               Container(
                 margin: const EdgeInsets.symmetric(horizontal: 24.0),
                 decoration: const BoxDecoration(
@@ -122,11 +113,9 @@ class OrderPage extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 16),
-              // Tab Bar View (Konten yang bisa di-swipe/klik)
               Expanded(
                 child: TabBarView(
                   children: [
-                    // Tampilan List Tab Active
                     ListView.separated(
                       padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
                       itemCount: activeOrders.length,
@@ -135,7 +124,6 @@ class OrderPage extends StatelessWidget {
                         return _OrderCard(data: activeOrders[index]);
                       },
                     ),
-                    // Tampilan List Tab Past Orders
                     ListView.separated(
                       padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
                       itemCount: pastOrders.length,
@@ -154,10 +142,6 @@ class OrderPage extends StatelessWidget {
     );
   }
 }
-
-// -------------------------------------------------------------------------
-// WIDGET KOMPONEN
-// -------------------------------------------------------------------------
 
 class _TopHeader extends StatelessWidget {
   const _TopHeader({Key? key}) : super(key: key);
@@ -211,14 +195,12 @@ class _OrderCard extends StatelessWidget {
       ),
       child: Column(
         children: [
-          // Bagian Atas: Logo, Nama Resto, Status
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               CircleAvatar(
                 backgroundColor: Colors.grey[100],
                 radius: 20,
-                // Placeholder logo restoran
                 child: const Icon(Icons.storefront_outlined, color: Colors.grey, size: 20),
               ),
               const SizedBox(width: 12),
@@ -238,7 +220,6 @@ class _OrderCard extends StatelessWidget {
                   ],
                 ),
               ),
-              // Status Badge
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
@@ -262,7 +243,6 @@ class _OrderCard extends StatelessWidget {
             child: Divider(color: Colors.black12, height: 1),
           ),
           
-          // Bagian Tengah: Detail Item
           Row(
             children: [
               Container(
@@ -271,7 +251,6 @@ class _OrderCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: Colors.grey[200],
                   borderRadius: BorderRadius.circular(8),
-                  // Ganti dengan NetworkImage/AssetImage asli nantinya
                 ),
                 child: const Icon(Icons.fastfood_outlined, color: Colors.grey),
               ),
@@ -303,7 +282,6 @@ class _OrderCard extends StatelessWidget {
           
           const SizedBox(height: 16),
           
-          // Bagian Bawah: Tombol Aksi
           Row(
             children: [
               Expanded(

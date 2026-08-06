@@ -2,6 +2,12 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>NSLocationWhenInUseUsageDescription</key>
+    <string>Aplikasi butuh lokasi untuk mencari resto terdekat.</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>Aplikasi butuh akses mic untuk fitur pencarian suara.</string>
+    <key>NSSpeechRecognitionUsageDescription</key>
+    <string>Aplikasi butuh akses untuk mengenali suara kamu.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>

@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-// Import file custom card lu
 import '../../../../core/widgets/food_card.dart';
-// Import model lu
 import '../../../../core/models/food_model.dart';
 
 class SearchPage extends StatefulWidget {
@@ -12,13 +10,9 @@ class SearchPage extends StatefulWidget {
 }
 
 class _SearchPageState extends State<SearchPage> {
-  // -------------------------------------------------------------------------
-  // DUMMY DATA
-  // Sesuai dengan properti yang dipanggil di FoodCard lu
-  // -------------------------------------------------------------------------
   final List<FoodModel> dummyFoods = [
     FoodModel(
-      imagePath: 'assets/images/sate.jpg', // Ganti dengan asset lu
+      imagePath: 'assets/images/sate.jpg',
       name: 'Spicy Burger',
       category: 'Fast Food',
       time: '15 min',
@@ -63,9 +57,9 @@ class _SearchPageState extends State<SearchPage> {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 3, // Food, Drinks, Dessert
+      length: 3,
       child: Scaffold(
-        backgroundColor: const Color(0xFFFAF8F5), // Warna background standar aplikasi lu
+        backgroundColor: const Color(0xFFFAF8F5),
         appBar: AppBar(
           backgroundColor: Colors.white,
           elevation: 0,
@@ -86,7 +80,7 @@ class _SearchPageState extends State<SearchPage> {
             ),
           ),
           bottom: const TabBar(
-            labelColor: Color(0xFFC84A33), // Warna accentRed lu
+            labelColor: Color(0xFFC84A33),
             unselectedLabelColor: Colors.grey,
             indicatorColor: Color(0xFFC84A33),
             indicatorWeight: 3,
@@ -101,11 +95,8 @@ class _SearchPageState extends State<SearchPage> {
         ),
         body: TabBarView(
           children: [
-            // Tab 1: Food
             _buildGridContent(dummyFoods),
-            // Tab 2: Drinks
             _buildGridContent(dummyDrinks),
-            // Tab 3: Dessert
             _buildGridContent(dummyDesserts),
           ],
         ),
@@ -113,10 +104,6 @@ class _SearchPageState extends State<SearchPage> {
     );
   }
 
-  // -------------------------------------------------------------------------
-  // WIDGET BUILDER
-  // Dipisah agar tidak banyak kode yang berulang (DRY Principle)
-  // -------------------------------------------------------------------------
   Widget _buildGridContent(List<FoodModel> dataList) {
     if (dataList.isEmpty) {
       return const Center(
@@ -130,15 +117,13 @@ class _SearchPageState extends State<SearchPage> {
     return GridView.builder(
       padding: const EdgeInsets.all(20),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2, // 2 kolom sejajar
-        // Rasio ini disesuaikan dengan dimensi card lu (170 / 230)
+        crossAxisCount: 2,
         childAspectRatio: 170 / 230,
         crossAxisSpacing: 16,
         mainAxisSpacing: 16,
       ),
       itemCount: dataList.length,
       itemBuilder: (context, index) {
-        // Langsung panggil custom FoodCard lu di sini
         return FoodCard(food: dataList[index]);
       },
     );

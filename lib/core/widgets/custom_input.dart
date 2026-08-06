@@ -1,7 +1,6 @@
-import 'package:flutter/material.dart'; // Typo import udah ilang
+import 'package:flutter/material.dart';
 
 class CustomInput extends StatelessWidget {
-  // text bisa lu ganti namanya jadi label biar lebih jelas
   final String label; 
   final String hint;
   final bool isPassword;
@@ -29,10 +28,9 @@ class CustomInput extends StatelessWidget {
         controller: controller, 
         obscureText: isPassword,
         decoration: InputDecoration(
-          labelText: label, // Nampilin judul input
+          labelText: label,
           hintText: hint,
           prefixIcon: icon != null ? Icon(icon) : null,
-          // Bikin input kelihatan tinggi pakai padding dalam, bukan SizedBox
           contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18), 
           
           border: OutlineInputBorder(

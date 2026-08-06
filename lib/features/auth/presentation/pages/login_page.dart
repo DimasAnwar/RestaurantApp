@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:restauran_app/core/theme/app_colors.dart';
 import '../../../../core/widgets/custom_button.dart';
 import '../../../../core/widgets/custom_input.dart';
@@ -14,6 +15,10 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
+  bool _isLoading = false;
+
+  final supabase = Supabase.instance.client;
+
   @override
   void dispose() {
     _emailController.dispose();
@@ -21,16 +26,59 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
+  Future<void> _login() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final email = _emailController.text.trim();
+      final password = _passwordController.text.trim();
+
+      if (email.isEmpty || password.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Email dan Password wajib diisi!')),
+        );
+        return;
+      }
+
+      await supabase.auth.signInWithPassword(
+        email: email,
+        password: password,
+      );
+
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, '/dashboard');
+      }
+    } on AuthException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error.message), backgroundColor: Colors.red),
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Terjadi kesalahan tak terduga'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background, // Kasih warna background dasar
+      backgroundColor: AppColors.background, 
       body: SafeArea(
         child: SingleChildScrollView(
           child: SizedBox(
             width: double.infinity, 
-            // Tambahin tinggi minimal seukuran layar biar tetap bisa ke tengah
-            // walau dibungkus SingleChildScrollView
             height: MediaQuery.of(context).size.height - MediaQuery.of(context).padding.top,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
@@ -45,7 +93,7 @@ class _LoginPageState extends State<LoginPage> {
                   "Magic Food",
                   style: TextStyle(
                     fontFamily: 'Inter',
-                    fontSize: 24, // Besarin dikit biar kerasa judulnya
+                    fontSize: 24, 
                     fontWeight: FontWeight.bold
                   ),
                 ),
@@ -53,22 +101,21 @@ class _LoginPageState extends State<LoginPage> {
                 Padding(
                   padding: const EdgeInsets.all(20),
                   child: Container(
-                    // height: 400 dihapus biar tingginya dinamis
                     width: double.infinity,
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(30),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.1), // Dibikin lebih soft shadow-nya
+                          color: Colors.black.withOpacity(0.1), 
                           spreadRadius: 2,
-                          blurRadius: 15, // Blur dilebarin biar makin elegan
+                          blurRadius: 15, 
                           offset: const Offset(0, 5),
                         )
                       ]
                     ),
                     child : Padding(
-                      padding: const EdgeInsets.all(24), // Diganti dari EdgeInsetsGeometry
+                      padding: const EdgeInsets.all(24), 
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -76,7 +123,7 @@ class _LoginPageState extends State<LoginPage> {
                             "Welcome Back",
                             style: TextStyle(
                               fontSize: 20,
-                              fontWeight: FontWeight.w700, // Diganti dari FontWeight(700)
+                              fontWeight: FontWeight.w700, 
                             ),
                           ),
                           const SizedBox(height: 20),
@@ -85,10 +132,10 @@ class _LoginPageState extends State<LoginPage> {
                             "Email",
                             style: TextStyle(
                               fontSize: 14,
-                              fontWeight: FontWeight.w500, // Diganti dari FontWeight(400)
+                              fontWeight: FontWeight.w500, 
                             ),
                           ),
-                          const SizedBox(height: 8), // Kasih jarak dikit antara label dan input
+                          const SizedBox(height: 8), 
                           CustomInput(
                             label: "Email",
                             hint: "Jhondoe@gmail.com",
@@ -113,7 +160,6 @@ class _LoginPageState extends State<LoginPage> {
                             controller: _passwordController, 
                           ),
                           
-                          // Bikin Lupa Password rata kanan biar estetik
                           Align(
                             alignment: Alignment.centerRight,
                             child: TextButton(
@@ -122,13 +168,15 @@ class _LoginPageState extends State<LoginPage> {
                             ),
                           ),
 
-                          const SizedBox(height: 10), // Jarak sebelum tombol
+                          const SizedBox(height: 10), 
 
-                          CustomButton(
-                            text: "Login", 
-                            onPressed: (){
-                              Navigator.pushNamed(context, '/dashboard');
-                            }
+                          Center(
+                            child: _isLoading 
+                                ? const CircularProgressIndicator(color: AppColors.primary)
+                                : CustomButton(
+                                    text: "Login", 
+                                    onPressed: _login,
+                                  ),
                           ),                  
                         ],
                       ),

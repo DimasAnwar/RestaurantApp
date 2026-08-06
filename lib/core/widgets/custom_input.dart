@@ -6,33 +6,32 @@ class CustomInput extends StatelessWidget {
   final String hint;
   final bool isPassword;
   final double? width;
-  
-  // INI WAJIB ADA BUAT NANGKEP KETIKAN USER
+  final IconData? icon;
   final TextEditingController controller; 
 
   const CustomInput({
-    Key? key,
+    super.key,
     required this.label,
     required this.hint,
-    required this.controller, // Controller jadi wajib diisi
+    required this.controller,
     this.isPassword = false,
     this.width,
-  }) : super(key: key);
+    this.icon,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final inputWidth = width ?? MediaQuery.of(context).size.width * 0.85;
+    final inputWidth = width ?? MediaQuery.of(context).size.width * 0.8;
     
     return SizedBox(
       width: inputWidth,
-      // height: 55 dihapus, biarkan TextField bernapas
       child: TextField(
-        controller: controller, // Pasang controller-nya di sini
-        obscureText: isPassword, // Kalau isPassword true, teks jadi bulet-bulet
+        controller: controller, 
+        obscureText: isPassword,
         decoration: InputDecoration(
           labelText: label, // Nampilin judul input
           hintText: hint,
-          
+          prefixIcon: icon != null ? Icon(icon) : null,
           // Bikin input kelihatan tinggi pakai padding dalam, bukan SizedBox
           contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18), 
           
@@ -40,7 +39,6 @@ class CustomInput extends StatelessWidget {
             borderRadius: BorderRadius.circular(20),
           ),
           
-          // Opsional: Bikin warna border pas lagi diklik (fokus)
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(20),
             borderSide: BorderSide(

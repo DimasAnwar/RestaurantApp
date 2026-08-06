@@ -4,7 +4,6 @@ import '../models/food_model.dart';
 
 
 class FoodCard extends StatelessWidget {
-  // Widget ini sekarang butuh data makanan buat ditampilin
   final FoodModel food;
 
   const FoodCard({Key? key, required this.food}) : super(key: key);

@@ -188,7 +188,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // Fungsi helper biar kode Tabs Menu nggak kotor
   Widget _buildKatalogMenu(IconData icon, String title) {
     return Column(
       children: [

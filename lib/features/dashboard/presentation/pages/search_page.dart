@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../core/widgets/food_card.dart';
 import '../../../../core/models/food_model.dart';
+import '../../../../core/services/menu_service.dart'; // Sesuaikan path-nya
 
 class SearchPage extends StatefulWidget {
   const SearchPage({Key? key}) : super(key: key);
@@ -10,49 +11,38 @@ class SearchPage extends StatefulWidget {
 }
 
 class _SearchPageState extends State<SearchPage> {
-  final List<FoodModel> dummyFoods = [
-    FoodModel(
-      imagePath: 'assets/images/sate.jpg',
-      name: 'Spicy Burger',
-      category: 'Fast Food',
-      time: '15 min',
-      price: 35000,
-    ),
-    FoodModel(
-      imagePath: 'assets/images/sate.jpg',
-      name: 'Nasi Goreng Spesial',
-      category: 'Indonesian',
-      time: '20 min',
-      price: 25000,
-    ),
-  ];
+  bool _isLoading = true;
+  String _searchQuery = ''; 
+  final TextEditingController _searchController = TextEditingController();
 
-  final List<FoodModel> dummyDrinks = [
-    FoodModel(
-      imagePath: 'assets/images/sate.jpg',
-      name: 'Iced Matcha Latte',
-      category: 'Coffee & Tea',
-      time: '5 min',
-      price: 28000,
-    ),
-    FoodModel(
-      imagePath: 'assets/images/sate.jpg',
-      name: 'Strawberry Smoothies',
-      category: 'Juice',
-      time: '10 min',
-      price: 22000,
-    ),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
 
-  final List<FoodModel> dummyDesserts = [
-    FoodModel(
-      imagePath: 'assets/images/sate.jpg',
-      name: 'Choco Lava Cake',
-      category: 'Cakes',
-      time: '25 min',
-      price: 40000,
-    ),
-  ];
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadData() async {
+    await MenuService.instance.fetchMenu();
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  // --- FUNGSI FILTER DATA BERDASARKAN PENCARIAN ---
+  List<FoodModel> _filterData(List<FoodModel> source) {
+    if (_searchQuery.isEmpty) return source;
+    return source.where((item) => 
+      item.name.toLowerCase().contains(_searchQuery.toLowerCase())
+    ).toList();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -70,10 +60,28 @@ class _SearchPageState extends State<SearchPage> {
               borderRadius: BorderRadius.circular(25),
             ),
             child: TextField(
+              controller: _searchController,
+              onChanged: (value) {
+                setState(() {
+                  _searchQuery = value;
+                });
+              },
               decoration: InputDecoration(
                 hintText: 'Cari makanan, minuman...',
                 hintStyle: TextStyle(color: Colors.grey[500], fontSize: 14),
                 prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                // Tombol X buat hapus teks pencarian
+                suffixIcon: _searchQuery.isNotEmpty 
+                    ? IconButton(
+                        icon: const Icon(Icons.clear, color: Colors.grey, size: 20),
+                        onPressed: () {
+                          _searchController.clear();
+                          setState(() {
+                            _searchQuery = '';
+                          });
+                        },
+                      )
+                    : null,
                 border: InputBorder.none,
                 contentPadding: const EdgeInsets.symmetric(vertical: 12),
               ),
@@ -93,23 +101,26 @@ class _SearchPageState extends State<SearchPage> {
             ],
           ),
         ),
-        body: TabBarView(
-          children: [
-            _buildGridContent(dummyFoods),
-            _buildGridContent(dummyDrinks),
-            _buildGridContent(dummyDesserts),
-          ],
-        ),
+        body: _isLoading 
+          ? const Center(child: CircularProgressIndicator(color: Color(0xFFC84A33)))
+          : TabBarView(
+              children: [
+                // Data difilter sebelum dikirim ke Grid
+                _buildGridContent(_filterData(MenuService.instance.foods)),
+                _buildGridContent(_filterData(MenuService.instance.drinks)),
+                _buildGridContent(_filterData(MenuService.instance.desserts)),
+              ],
+            ),
       ),
     );
   }
 
   Widget _buildGridContent(List<FoodModel> dataList) {
     if (dataList.isEmpty) {
-      return const Center(
+      return Center(
         child: Text(
-          'Belum ada item',
-          style: TextStyle(color: Colors.grey),
+          _searchQuery.isEmpty ? 'Belum ada item' : 'Item tidak ditemukan',
+          style: const TextStyle(color: Colors.grey),
         ),
       );
     }

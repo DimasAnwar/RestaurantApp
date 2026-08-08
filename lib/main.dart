@@ -16,7 +16,7 @@ void main() async {
 
   await Supabase.initialize(
     url: dotenv.env['SUPABASE_URL'] ?? '',
-    anonKey: dotenv.env['SUPABASE_ANON_KEY'] ?? '',
+    publishableKey: dotenv.env['SUPABASE_ANON_KEY'] ?? '',
   );
 
   runApp(const MyApp());
@@ -33,14 +33,45 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'FoodApp',
       initialRoute: '/',
-      routes: {
-        '/': (context) => const SplashPage(), 
-        '/onboarding': (context) => const OnboardingPage(), 
-        '/login': (context) => const LoginPage(),
-        '/regist':(context) => const RegistPage(),
-        '/dashboard':(context) => const MainDashboardPage()
-      },
       theme: AppTheme.lightTheme, 
+      
+      // PERUBAHAN: Pakai onGenerateRoute buat intercept perpindahan halaman
+      onGenerateRoute: (settings) {
+        final user = supabase.auth.currentUser;
+        
+        // Daftar halaman yang BOLEH diakses walaupun belum login
+        final isPublicRoute = settings.name == '/' || 
+                              settings.name == '/onboarding' || 
+                              settings.name == '/login' || 
+                              settings.name == '/regist';
+
+        // 1. CEK: Kalau belum login TAPI maksa masuk rute private (kayak /dashboard) -> Redirect ke Login
+        if (user == null && !isPublicRoute) {
+          return MaterialPageRoute(builder: (context) => const LoginPage());
+        }
+
+        // 2. CEK: Kalau UDAH login TAPI iseng buka halaman login/regist lagi -> Redirect ke Dashboard
+        if (user != null && (settings.name == '/login' || settings.name == '/regist' || settings.name == '/onboarding')) {
+          return MaterialPageRoute(builder: (context) => const MainDashboardPage());
+        }
+
+        // 3. Mapping rute normal kalau lolos pengecekan di atas
+        switch (settings.name) {
+          case '/':
+            return MaterialPageRoute(builder: (context) => const SplashPage());
+          case '/onboarding':
+            return MaterialPageRoute(builder: (context) => const OnboardingPage());
+          case '/login':
+            return MaterialPageRoute(builder: (context) => const LoginPage());
+          case '/regist':
+            return MaterialPageRoute(builder: (context) => const RegistPage());
+          case '/dashboard':
+            return MaterialPageRoute(builder: (context) => const MainDashboardPage());
+          default:
+            // Kalau rutenya ngaco/gak ketemu, amanin dengan kembali ke Splash
+            return MaterialPageRoute(builder: (context) => const SplashPage());
+        }
+      },
     );
   }
 }

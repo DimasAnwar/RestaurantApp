@@ -8,6 +8,7 @@ import 'package:restauran_app/core/theme/app_colors.dart';
 import '../../../../core/widgets/custom_input.dart';
 import '../../../../core/models/food_model.dart'; 
 import '../../../../core/widgets/food_card.dart'; 
+import '../../../../core/services/menu_service.dart'; // Import MenuService
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -29,6 +30,9 @@ class _HomePageState extends State<HomePage> {
   // --- STATE MICROPHONE ---
   late stt.SpeechToText _speech;
   bool _isListening = false;
+  
+  // --- STATE LOADING MENU ---
+  bool _isMenuLoading = true;
 
   @override
   void initState() {
@@ -36,6 +40,7 @@ class _HomePageState extends State<HomePage> {
     _speech = stt.SpeechToText();
     _getCurrentLocation();
     _getUserData(); 
+    _loadMenuData(); // Panggil fungsi load menu
   }
 
   // --- FUNGSI TARIK DATA DARI SUPABASE ---
@@ -45,6 +50,16 @@ class _HomePageState extends State<HomePage> {
       setState(() {
         _userName = user.userMetadata?['username'] ?? "User";
         _profileImageUrl = user.userMetadata?['avatar_url']; 
+      });
+    }
+  }
+
+  // --- FUNGSI LOAD DATA MENU DARI SERVICE ---
+  Future<void> _loadMenuData() async {
+    await MenuService.instance.fetchMenu();
+    if (mounted) {
+      setState(() {
+        _isMenuLoading = false;
       });
     }
   }
@@ -82,7 +97,7 @@ class _HomePageState extends State<HomePage> {
       );
       final Geocoding geocoding = Geocoding();
       Position position = await Geolocator.getCurrentPosition(locationSettings: locationSettings);
-     final List<Placemark> placemarks = await geocoding.placemarkFromCoordinates(52.2165157, 6.9437819);
+      final List<Placemark> placemarks = await geocoding.placemarkFromCoordinates(position.latitude, position.longitude);
       
       if (placemarks.isNotEmpty) {
       Placemark place = placemarks[0];
@@ -121,6 +136,9 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    // Ambil maksimal 5 data recommended
+    final recommendedList = MenuService.instance.recommended.take(5).toList();
+
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
@@ -150,7 +168,7 @@ class _HomePageState extends State<HomePage> {
                             width: 45, height: 45, fit: BoxFit.cover,
                           )
                         : Image.asset( 
-                            "assets/images/default_profile.png", 
+                            "assets/images/sate.jpg", 
                             width: 45, height: 45, fit: BoxFit.cover,
                           ),
                     ),
@@ -287,14 +305,16 @@ class _HomePageState extends State<HomePage> {
                 // --- LIST MAKANAN (CUSTOM WIDGET) ---
                 SizedBox(
                   height: 240, 
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal, 
-                    itemCount: dummyFoods.length, 
-                    separatorBuilder: (context, index) => const SizedBox(width: 16), 
-                    itemBuilder: (context, index) {
-                      return FoodCard(food: dummyFoods[index]); 
-                    },
-                  ),
+                  child: _isMenuLoading 
+                    ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+                    : ListView.separated(
+                        scrollDirection: Axis.horizontal, 
+                        itemCount: recommendedList.length, 
+                        separatorBuilder: (context, index) => const SizedBox(width: 16), 
+                        itemBuilder: (context, index) {
+                          return FoodCard(food: recommendedList[index]); 
+                        },
+                      ),
                 )
               ]
             )

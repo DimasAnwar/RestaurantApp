@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:restauran_app/core/theme/app_colors.dart'; 
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../../core/services/cart_service.dart';
+import '../../../cart/cart_page.dart'; // Sesuaikan path ini kalau error
 
 class OrderData {
   final String restaurantName;
@@ -27,51 +30,109 @@ class OrderData {
   });
 }
 
-class OrderPage extends StatelessWidget {
+class OrderPage extends StatefulWidget {
   const OrderPage({Key? key}) : super(key: key);
 
   @override
+  State<OrderPage> createState() => _OrderPageState();
+}
+
+class _OrderPageState extends State<OrderPage> {
+  bool _isLoading = true;
+  List<OrderData> _activeOrders = [];
+  List<OrderData> _pastOrders = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchOrders();
+  }
+
+  // --- FUNGSI TARIK DATA TRANSAKSI DARI SUPABASE ---
+  Future<void> _fetchOrders() async {
+    setState(() => _isLoading = true);
+    
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user == null) {
+      if (mounted) setState(() => _isLoading = false);
+      return;
+    }
+
+    try {
+      // Narik tabel orders sekaligus detail order_items-nya
+      final response = await Supabase.instance.client
+          .from('orders')
+          .select('*, order_items(*)')
+          .eq('user_id', user.id)
+          .order('created_at', ascending: false);
+
+      List<OrderData> active = [];
+      List<OrderData> past = [];
+
+      for (var json in response) {
+        final rawStatus = json['status'] as String;
+        final isActive = ['pending', 'cooking', 'on_delivery'].contains(rawStatus);
+        
+        final items = json['order_items'] as List<dynamic>;
+        
+        // Gabungin nama-nama item buat deskripsi (Misal: "Nasi Goreng, Es Teh...")
+        final itemNames = items.map((e) => e['nama_makanan']).toList();
+        final description = itemNames.join(', ');
+
+        final orderData = OrderData(
+          restaurantName: 'Magic Food', // Default sesuai request lu
+          date: _formatDate(json['created_at']),
+          orderId: json['order_number'],
+          status: _formatStatus(rawStatus),
+          isActive: isActive,
+          itemCount: items.fold<int>(0, (sum, item) => sum + (item['jumlah'] as int)),
+          itemDescription: description.isEmpty ? 'Custom Order' : description,
+          price: (json['total_price'] as num).toDouble(),
+          buttonText: isActive ? 'Track Order' : 'Reorder',
+          hasStarButton: !isActive,
+        );
+
+        if (isActive) {
+          active.add(orderData);
+        } else {
+          past.add(orderData);
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _activeOrders = active;
+          _pastOrders = past;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetch orders: $e');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  // --- HELPER BUAT FORMAT TANGGAL ---
+  String _formatDate(String isoString) {
+    final date = DateTime.parse(isoString).toLocal();
+    final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return '${date.day} ${months[date.month - 1]} ${date.year}, ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+  }
+
+  // --- HELPER BUAT FORMAT STATUS TRANSLATE KE INDO ---
+  String _formatStatus(String status) {
+    switch (status) {
+      case 'pending': return 'Menunggu';
+      case 'cooking': return 'Sedang Dimasak';
+      case 'on_delivery': return 'Diperjalanan';
+      case 'completed': return 'Selesai';
+      case 'cancelled': return 'Dibatalkan';
+      default: return status;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final List<OrderData> activeOrders = [
-      OrderData(
-        restaurantName: 'Artisan Coffee Co.',
-        date: 'Today, 09:42 AM',
-        orderId: '#AC-8921',
-        status: 'On the way',
-        isActive: true,
-        itemCount: 2,
-        itemDescription: 'Flat White, Avocado Toast',
-        price: 24.50,
-        buttonText: 'Track Order',
-      ),
-      OrderData(
-        restaurantName: 'Green Bowl Eatery',
-        date: 'Today, 12:15 PM',
-        orderId: '#GB-4019',
-        status: 'In Kitchen',
-        isActive: true,
-        itemCount: 1,
-        itemDescription: 'Superfood Quinoa Bowl',
-        price: 18.00,
-        buttonText: 'View Details',
-      ),
-    ];
-
-    final List<OrderData> pastOrders = [
-      OrderData(
-        restaurantName: 'Koyo Sushi',
-        date: 'Yesterday, 07:30 PM',
-        orderId: '#KS-9920',
-        status: 'Delivered',
-        isActive: false,
-        itemCount: 3,
-        itemDescription: 'Spicy Tuna Roll, Edamame...',
-        price: 42.00,
-        buttonText: 'Reorder',
-        hasStarButton: true,
-      ),
-    ];
-
     return DefaultTabController(
       length: 2,
       child: Scaffold(
@@ -80,7 +141,7 @@ class OrderPage extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const _TopHeader(),
+              _TopHeader(onRefreshOrders: _fetchOrders),
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 24.0, vertical: 10.0),
                 child: Text(
@@ -114,26 +175,14 @@ class OrderPage extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               Expanded(
-                child: TabBarView(
-                  children: [
-                    ListView.separated(
-                      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
-                      itemCount: activeOrders.length,
-                      separatorBuilder: (context, index) => const SizedBox(height: 16),
-                      itemBuilder: (context, index) {
-                        return _OrderCard(data: activeOrders[index]);
-                      },
-                    ),
-                    ListView.separated(
-                      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
-                      itemCount: pastOrders.length,
-                      separatorBuilder: (context, index) => const SizedBox(height: 16),
-                      itemBuilder: (context, index) {
-                        return _OrderCard(data: pastOrders[index]);
-                      },
-                    ),
-                  ],
-                ),
+                child: _isLoading
+                    ? Center(child: CircularProgressIndicator(color: AppColors.primary))
+                    : TabBarView(
+                        children: [
+                          _buildOrderList(_activeOrders, 'Belum ada pesanan aktif nih.'),
+                          _buildOrderList(_pastOrders, 'Belum ada riwayat pesanan.'),
+                        ],
+                      ),
               ),
             ],
           ),
@@ -141,13 +190,52 @@ class OrderPage extends StatelessWidget {
       ),
     );
   }
+
+  Widget _buildOrderList(List<OrderData> orders, String emptyMessage) {
+    if (orders.isEmpty) {
+      return Center(
+        child: Text(emptyMessage, style: const TextStyle(color: Colors.grey)),
+      );
+    }
+    return ListView.separated(
+      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
+      itemCount: orders.length,
+      separatorBuilder: (context, index) => const SizedBox(height: 16),
+      itemBuilder: (context, index) {
+        return _OrderCard(data: orders[index]);
+      },
+    );
+  }
 }
 
-class _TopHeader extends StatelessWidget {
-  const _TopHeader({Key? key}) : super(key: key);
+class _TopHeader extends StatefulWidget {
+  final VoidCallback onRefreshOrders;
+
+  const _TopHeader({Key? key, required this.onRefreshOrders}) : super(key: key);
+
+  @override
+  State<_TopHeader> createState() => _TopHeaderState();
+}
+
+class _TopHeaderState extends State<_TopHeader> {
+  void _goToCart() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const CartPage()),
+    );
+    // Refresh badge keranjang
+    setState(() {});
+    
+    // Kalau result-nya true (artinya user abis checkout), refresh data order
+    if (result == true) {
+      widget.onRefreshOrders();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    int cartCount = CartService.instance.totalItems;
+
     return Padding(
       padding: const EdgeInsets.all(24.0),
       child: Row(
@@ -167,7 +255,18 @@ class _TopHeader extends StatelessWidget {
               ),
             ],
           ),
-          const Icon(Icons.tune_rounded, color: Colors.grey),
+          GestureDetector(
+            onTap: _goToCart,
+            child: Badge(
+              isLabelVisible: cartCount > 0,
+              label: Text(
+                cartCount.toString(),
+                style: const TextStyle(color: Colors.white, fontSize: 11),
+              ),
+              backgroundColor: Colors.red,
+              child: const Icon(Icons.shopping_cart_outlined, color: Colors.grey, size: 28),
+            ),
+          ),
         ],
       ),
     );
@@ -177,6 +276,11 @@ class _TopHeader extends StatelessWidget {
 class _OrderCard extends StatelessWidget {
   final OrderData data;
   const _OrderCard({Key? key, required this.data}) : super(key: key);
+
+  String _formatPrice(num price) {
+    return price.toStringAsFixed(0).replaceAllMapped(
+        RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -214,7 +318,7 @@ class _OrderCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${data.date} • ID: ${data.orderId}',
+                      '${data.date} • ${data.orderId}',
                       style: const TextStyle(color: Colors.grey, fontSize: 12),
                     ),
                   ],
@@ -273,8 +377,9 @@ class _OrderCard extends StatelessWidget {
                   ],
                 ),
               ),
+              // PERUBAHAN: Format Harga ke Rupiah
               Text(
-                '\$${data.price.toStringAsFixed(2)}',
+                'Rp ${_formatPrice(data.price)}',
                 style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
               ),
             ],

@@ -1,6 +1,7 @@
+// Lokasi: lib/core/widgets/food_card.dart
 import 'package:flutter/material.dart';
 import '../models/food_model.dart';
-
+import '../services/cart_service.dart';
 
 class FoodCard extends StatelessWidget {
   final FoodModel food;
@@ -33,9 +34,13 @@ class FoodCard extends StatelessWidget {
               child: Stack(
                 children: [
                   Positioned.fill(
-                    child: Image.asset(
+                    child: Image.network(
                       food.imagePath,
                       fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => Container(
+                        color: Colors.grey[200],
+                        child: const Icon(Icons.broken_image, color: Colors.grey),
+                      ),
                     ),
                   ),
                   Positioned(
@@ -110,8 +115,19 @@ class FoodCard extends StatelessWidget {
                         ),
                       ),
                       const Spacer(),
+                      // PERUBAHAN DISINI: Tombol Add to Cart berfungsi
                       IconButton(
-                        onPressed: () {},
+                        onPressed: () {
+                          CartService.instance.addToCart(food);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('${food.name} masuk ke keranjang!'),
+                              duration: const Duration(seconds: 1),
+                              backgroundColor: Colors.green,
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                        },
                         icon: const Icon(Icons.add_circle, color: Colors.deepOrange),
                         padding: EdgeInsets.zero,
                         constraints: const BoxConstraints(),

@@ -5,13 +5,20 @@ import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:supabase_flutter/supabase_flutter.dart'; 
 
 import 'package:restauran_app/core/theme/app_colors.dart';
-import '../../../../core/widgets/custom_input.dart';
-import '../../../../core/models/food_model.dart'; 
+import '../../../../core/services/menu_service.dart';
 import '../../../../core/widgets/food_card.dart'; 
-import '../../../../core/services/menu_service.dart'; // Import MenuService
+
+// Import komponen UI yang udah kita pisah
+import '../widgets/home_header.dart';
+import '../widgets/home_search_bar.dart';
+import '../widgets/promo_banner.dart';
+import '../widgets/category_menu.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({Key? key}) : super(key: key);
+  // Tambahin parameter ini buat nerima fungsi ganti tab dari MainDashboardPage
+  final Function(int, {String? query, int? tabIndex})? onSwitchTab;
+
+  const HomePage({Key? key, this.onSwitchTab}) : super(key: key);
 
   @override
   _HomePageState createState() => _HomePageState();
@@ -19,19 +26,11 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final TextEditingController _searchController = TextEditingController();
-
-  // --- STATE LOKASI ---
   String _currentAddress = "Mencari lokasi...";
-  
-  // --- STATE PROFILE ---
-  String _userName = "User"; // Default sebelum ditarik dari DB
+  String _userName = "User"; 
   String? _profileImageUrl; 
-
-  // --- STATE MICROPHONE ---
   late stt.SpeechToText _speech;
   bool _isListening = false;
-  
-  // --- STATE LOADING MENU ---
   bool _isMenuLoading = true;
 
   @override
@@ -40,10 +39,9 @@ class _HomePageState extends State<HomePage> {
     _speech = stt.SpeechToText();
     _getCurrentLocation();
     _getUserData(); 
-    _loadMenuData(); // Panggil fungsi load menu
+    _loadMenuData();
   }
 
-  // --- FUNGSI TARIK DATA DARI SUPABASE ---
   void _getUserData() {
     final user = Supabase.instance.client.auth.currentUser;
     if (user != null) {
@@ -54,17 +52,12 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  // --- FUNGSI LOAD DATA MENU DARI SERVICE ---
   Future<void> _loadMenuData() async {
     await MenuService.instance.fetchMenu();
-    if (mounted) {
-      setState(() {
-        _isMenuLoading = false;
-      });
-    }
+    if (mounted) setState(() => _isMenuLoading = false);
   }
 
-  // --- FUNGSI AMBIL LOKASI REALTIME (DISESUAIKAN KE GEOLOCATOR v14) ---
+  // --- INI LOGIC LOKASI LU YANG BENER, GAK GUA UBAH SAMA SEKALI ---
   Future<void> _getCurrentLocation() async {
     bool serviceEnabled;
     LocationPermission permission;
@@ -90,7 +83,6 @@ class _HomePageState extends State<HomePage> {
         return;
       }
 
-      // PERUBAHAN UTAMA: Menggunakan LocationSettings untuk geolocator v14+
       LocationSettings locationSettings = const LocationSettings(
         accuracy: LocationAccuracy.high,
         distanceFilter: 100,
@@ -113,30 +105,27 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  // --- FUNGSI SPEECH TO TEXT (MIC) ---
   void _listen() async {
     if (!_isListening) {
-      bool available = await _speech.initialize(
-        onStatus: (val) => debugPrint('onStatus: $val'),
-        onError: (val) => debugPrint('onError: $val'),
-      );
+      bool available = await _speech.initialize();
       if (available) {
         setState(() => _isListening = true);
         _speech.listen(
-          onResult: (val) => setState(() {
-            _searchController.text = val.recognizedWords;
-          }),
+          onResult: (val) => setState(() => _searchController.text = val.recognizedWords),
         );
       }
     } else {
       setState(() => _isListening = false);
       _speech.stop();
+      // Pindah ke search page setelah selesai ngomong
+      if (_searchController.text.isNotEmpty) {
+        widget.onSwitchTab?.call(1, query: _searchController.text);
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Ambil maksimal 5 data recommended
     final recommendedList = MenuService.instance.recommended.take(5).toList();
 
     return Scaffold(
@@ -147,166 +136,46 @@ class _HomePageState extends State<HomePage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                
-                // --- HEADER LOKASI & PROFILE ---
-                Row(
-                  children: [
-                    Icon(Icons.place, color: AppColors.primary),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        _currentAddress,
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    ClipOval(
-                      child: _profileImageUrl != null 
-                        ? Image.network( 
-                            _profileImageUrl!,
-                            width: 45, height: 45, fit: BoxFit.cover,
-                          )
-                        : Image.asset( 
-                            "assets/images/sate.jpg", 
-                            width: 45, height: 45, fit: BoxFit.cover,
-                          ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-
-                // --- SAPAAN DINAMIS ---
-                Text(
-                  "Hello $_userName", 
-                  style: const TextStyle(fontSize: 33, fontWeight: FontWeight.bold),
-                ),
-                const Text(
-                  "What are you Eating Today?",
-                  style: TextStyle(fontSize: 16, color: Colors.grey),
-                ),
+                HomeHeader(address: _currentAddress, userName: _userName, imageUrl: _profileImageUrl),
                 const SizedBox(height: 20),
                 
-                // --- SEARCH BAR & MIC ---
-                Row(
-                  children: [
-                    Expanded(
-                      child: CustomInput(
-                        label: "Search", 
-                        hint: "Search for food, drinks etc.",
-                        controller: _searchController,
-                        isPassword: false,
+                HomeSearchBar(
+                    controller: _searchController,
+                    isListening: _isListening,
+                    onMicTap: _listen,
+                    // PAS DI SEARCH, PAKSA KE TAB 'ALL' (Index 0)
+                    onSubmitted: (value) => widget.onSwitchTab?.call(1, query: value, tabIndex: 0),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    GestureDetector(
-                      onTap: _listen,
-                      child: CircleAvatar(
-                        radius: 24,
-                        backgroundColor: _isListening ? Colors.red : AppColors.primary.withOpacity(0.1),
-                        child: Icon(
-                          _isListening ? Icons.mic : Icons.mic_none, 
-                          size: 28, 
-                          color: _isListening ? Colors.white : AppColors.primary,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
                 const SizedBox(height: 20),
-
-                // --- PROMO BANNER ---
-                SizedBox(
-                  width: double.infinity,
-                  height: 150,
-                  child: Stack(
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(20),
-                        child: SizedBox(
-                          width: double.infinity,
-                          child: Image.asset("assets/images/promo1.jpg", fit: BoxFit.cover),
-                        ),
-                      ),
-                      Positioned.fill(
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(20),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.topCenter, end: Alignment.bottomCenter,
-                                colors: [Colors.transparent, Colors.black.withOpacity(0.5)],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      Positioned(
-                        left: 20, top: 20,
-                        child: Container(
-                          alignment: Alignment.center,
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Text(
-                            "Special Offers",
-                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
-                          ),
-                        ),
-                      ),
-                      const Positioned(
-                        bottom: 20, left: 20,
-                        child: Text(
-                          "50% Off \nFirst Order",
-                          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                
+                const PromoBanner(),
                 const SizedBox(height: 20),
-
-                // --- TABS KATALOG ---
-                SizedBox(
-                  width: double.infinity,
-                  height: 80,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly, 
-                    children: [
-                      _buildKatalogMenu(Icons.food_bank, "Food"),
-                      _buildKatalogMenu(Icons.local_drink_rounded, "Drinks"),
-                      _buildKatalogMenu(Icons.icecream_rounded, "Dessert"),
-                    ],
-                  ),
-                ),
+                
+                CategoryMenu(
+  // KARENA 'ALL' ITU 0, KATEGORI MAKANAN MULAINYA DARI 1 (Makanya ditambah 1)
+  onCategoryTap: (tabIndex) => widget.onSwitchTab?.call(1, tabIndex: tabIndex + 1),
+),
                 const SizedBox(height: 20),
 
                 // --- RECOMMENDED HEADER ---
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
-                      "Recommended",
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                    ),
+                    const Text("Recommended", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                     TextButton(
-                      onPressed: () {},
-                      child: Text(
-                        "See all",
-                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.primary),
-                      ),
-                    )
+  // ARAHIN KE TAB 'ALL' (Index 0)
+  onPressed: () => widget.onSwitchTab?.call(1, tabIndex: 0),
+  child: Text("See all", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.primary)),
+)
                   ],
                 ),
                 const SizedBox(height: 5),
 
-                // --- LIST MAKANAN (CUSTOM WIDGET) ---
+                // --- LIST MAKANAN RECOMMENDED ---
                 SizedBox(
                   height: 240, 
                   child: _isMenuLoading 
-                    ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+                    ? const Center(child: CircularProgressIndicator())
                     : ListView.separated(
                         scrollDirection: Axis.horizontal, 
                         itemCount: recommendedList.length, 
@@ -321,29 +190,6 @@ class _HomePageState extends State<HomePage> {
           )
         )
       )
-    );
-  }
-
-  // --- WIDGET MENU KATALOG KECIL ---
-  Widget _buildKatalogMenu(IconData icon, String title) {
-    return Column(
-      children: [
-        Container(
-          decoration: BoxDecoration(
-            color: const Color.fromARGB(255, 235, 184, 174),
-            borderRadius: BorderRadius.circular(15),
-          ),
-          child: IconButton(
-            onPressed: () {},
-            icon: Icon(icon, size: 36, color: const Color.fromARGB(255, 85, 27, 13)),
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          title,
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, fontFamily: 'Inter'),
-        )
-      ],
     );
   }
 }

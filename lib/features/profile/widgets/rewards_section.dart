@@ -27,7 +27,8 @@ class RewardsSection extends StatelessWidget {
         ),
         const SizedBox(height: 10),
         SizedBox(
-          height: 130,
+          // PERUBAHAN: Tinggi ditambahin dari 130 jadi 160 biar muat teks 2 baris
+          height: 160,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             itemCount: rewards.length,
@@ -66,8 +67,15 @@ class _RewardCard extends StatelessWidget {
             child: Icon(reward.icon, color: const Color(0xFF8D4B3F), size: 28),
           ),
           const SizedBox(height: 12),
-          Text(reward.title, textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-          const SizedBox(height: 4),
+          // PERUBAHAN: Ditambahin maxLines biar rapi dan ga bablas ke bawah
+          Text(
+            reward.title, 
+            textAlign: TextAlign.center, 
+            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 6),
           Text('${reward.points} pts', style: const TextStyle(color: Colors.grey, fontSize: 12)),
         ],
       ),

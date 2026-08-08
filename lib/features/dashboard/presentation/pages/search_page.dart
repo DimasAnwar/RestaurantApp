@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import '../../../../core/widgets/food_card.dart';
 import '../../../../core/models/food_model.dart';
-import '../../../../core/services/menu_service.dart'; // Sesuaikan path-nya
+import '../../../../core/services/menu_service.dart'; 
 
 class SearchPage extends StatefulWidget {
-  const SearchPage({Key? key}) : super(key: key);
+  final String initialQuery;
+  final int initialTab;
+
+  const SearchPage({Key? key, this.initialQuery = '', this.initialTab = 0}) : super(key: key);
 
   @override
   _SearchPageState createState() => _SearchPageState();
@@ -12,13 +15,26 @@ class SearchPage extends StatefulWidget {
 
 class _SearchPageState extends State<SearchPage> {
   bool _isLoading = true;
-  String _searchQuery = ''; 
-  final TextEditingController _searchController = TextEditingController();
+  late String _searchQuery; 
+  late TextEditingController _searchController;
 
   @override
   void initState() {
     super.initState();
+    _searchQuery = widget.initialQuery;
+    _searchController = TextEditingController(text: widget.initialQuery);
     _loadData();
+  }
+
+  @override
+  void didUpdateWidget(SearchPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialQuery != widget.initialQuery || oldWidget.initialTab != widget.initialTab) {
+      setState(() {
+        _searchQuery = widget.initialQuery;
+        _searchController.text = widget.initialQuery;
+      });
+    }
   }
 
   @override
@@ -29,14 +45,9 @@ class _SearchPageState extends State<SearchPage> {
 
   Future<void> _loadData() async {
     await MenuService.instance.fetchMenu();
-    if (mounted) {
-      setState(() {
-        _isLoading = false;
-      });
-    }
+    if (mounted) setState(() => _isLoading = false);
   }
 
-  // --- FUNGSI FILTER DATA BERDASARKAN PENCARIAN ---
   List<FoodModel> _filterData(List<FoodModel> source) {
     if (_searchQuery.isEmpty) return source;
     return source.where((item) => 
@@ -46,8 +57,17 @@ class _SearchPageState extends State<SearchPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Gabungin semua menu buat ditampilin di tab "All"
+    final allMenu = [
+      ...MenuService.instance.foods,
+      ...MenuService.instance.drinks,
+      ...MenuService.instance.desserts,
+    ];
+
     return DefaultTabController(
-      length: 3,
+      key: ValueKey(widget.initialTab), 
+      initialIndex: widget.initialTab,
+      length: 4, // SEKARANG JADI 4 TAB
       child: Scaffold(
         backgroundColor: const Color(0xFFFAF8F5),
         appBar: AppBar(
@@ -70,7 +90,6 @@ class _SearchPageState extends State<SearchPage> {
                 hintText: 'Cari makanan, minuman...',
                 hintStyle: TextStyle(color: Colors.grey[500], fontSize: 14),
                 prefixIcon: const Icon(Icons.search, color: Colors.grey),
-                // Tombol X buat hapus teks pencarian
                 suffixIcon: _searchQuery.isNotEmpty 
                     ? IconButton(
                         icon: const Icon(Icons.clear, color: Colors.grey, size: 20),
@@ -92,9 +111,11 @@ class _SearchPageState extends State<SearchPage> {
             unselectedLabelColor: Colors.grey,
             indicatorColor: Color(0xFFC84A33),
             indicatorWeight: 3,
+            isScrollable: true, // Biar gak tabrakan layarnya
             labelStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
             unselectedLabelStyle: TextStyle(fontWeight: FontWeight.w500, fontSize: 15),
             tabs: [
+              Tab(text: 'All'), // TAB BARU
               Tab(text: 'Food'),
               Tab(text: 'Drinks'),
               Tab(text: 'Dessert'),
@@ -105,7 +126,7 @@ class _SearchPageState extends State<SearchPage> {
           ? const Center(child: CircularProgressIndicator(color: Color(0xFFC84A33)))
           : TabBarView(
               children: [
-                // Data difilter sebelum dikirim ke Grid
+                _buildGridContent(_filterData(allMenu)),
                 _buildGridContent(_filterData(MenuService.instance.foods)),
                 _buildGridContent(_filterData(MenuService.instance.drinks)),
                 _buildGridContent(_filterData(MenuService.instance.desserts)),

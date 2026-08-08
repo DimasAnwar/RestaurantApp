@@ -49,13 +49,13 @@ class _SplashPageState extends State<SplashPage> with SingleTickerProviderStateM
     _controller.addStatusListener((status) {
       if (status == AnimationStatus.completed) {
         Future.delayed(const Duration(seconds: 3), () {
-  final user = Supabase.instance.client.auth.currentUser;
-  if (user != null) {
-    Navigator.pushReplacementNamed(context, '/dashboard');
-  } else {
-    Navigator.pushReplacementNamed(context, '/onboarding');
-  }
-});
+        final user = Supabase.instance.client.auth.currentUser;
+        if (user != null) {
+          Navigator.pushReplacementNamed(context, '/dashboard');
+        } else {
+          Navigator.pushReplacementNamed(context, '/onboarding');
+        }
+      });
       }
     });
   }

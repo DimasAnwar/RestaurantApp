@@ -14,22 +14,27 @@ class MainDashboardPage extends StatefulWidget {
 
 class _MainDashboardPageState extends State<MainDashboardPage> {
   int _currentIndex = 0;
+  String _searchQuery = '';
+  int _searchTab = 0;
   
-  // Fungsi buat ganti tab
-  void _switchTab(int index) {
+  // Fungsi ganti tab yang di-upgrade buat nerima parameter filter
+  void _switchTab(int index, {String? query, int? tabIndex}) {
     setState(() {
       _currentIndex = index;
+      if (query != null) _searchQuery = query;
+      if (tabIndex != null) _searchTab = tabIndex;
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    // List pages dipindah ke sini biar bisa passing fungsi _switchTab ke ProfilePage
     final List<Widget> pages = [
-      const HomePage(),
-      const SearchPage(),
+      HomePage(onSwitchTab: _switchTab),
+      // Lempar parameter ke SearchPage
+      SearchPage(initialQuery: _searchQuery, initialTab: _searchTab), 
       const OrderPage(),
-      ProfilePage(onSwitchTab: _switchTab), // Kirim fungsinya ke sini
+      // PERBAIKAN DI SINI: Bungkus pakai (index) => _switchTab(index)
+      ProfilePage(onSwitchTab: (index) => _switchTab(index)), 
     ];
 
     return Scaffold(
@@ -39,24 +44,12 @@ class _MainDashboardPageState extends State<MainDashboardPage> {
         type: BottomNavigationBarType.fixed,
         selectedItemColor: AppColors.primary,
         elevation: 20,
-        onTap: _switchTab,
+        onTap: (index) => _switchTab(index), // Tap biasa dari navbar
         items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: "Home",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.search),
-            label: "Search",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.shopping_cart),
-            label: "Cart",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: "Profil",
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
+          BottomNavigationBarItem(icon: Icon(Icons.search), label: "Search"),
+          BottomNavigationBarItem(icon: Icon(Icons.shopping_cart), label: "Cart"),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: "Profil"),
         ],
       ),
     );

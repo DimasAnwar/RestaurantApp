@@ -1,8 +1,122 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
 import 'package:restauran_app/core/theme/app_colors.dart';
+import 'map_picker_page.dart'; // Pastikan file map_picker_page.dart ada di folder yang sama
 
-class DeliveryAddressPage extends StatelessWidget {
+class DeliveryAddressPage extends StatefulWidget {
   const DeliveryAddressPage({Key? key}) : super(key: key);
+
+  @override
+  State<DeliveryAddressPage> createState() => _DeliveryAddressPageState();
+}
+
+class _DeliveryAddressPageState extends State<DeliveryAddressPage> {
+  String _currentAddress = "Mencari lokasi saat ini...";
+  bool _isLoadingLocation = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _getCurrentLocation();
+  }
+
+  // --- FUNGSI AMBIL LOKASI SAAT INI ---
+  Future<void> _getCurrentLocation() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    try {
+      serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        if (mounted) {
+          setState(() {
+            _currentAddress = "GPS tidak aktif. Nyalakan GPS lu bro.";
+            _isLoadingLocation = false;
+          });
+        }
+        return;
+      }
+
+      permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          if (mounted) {
+            setState(() {
+              _currentAddress = "Izin lokasi ditolak.";
+              _isLoadingLocation = false;
+            });
+          }
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        if (mounted) {
+          setState(() {
+            _currentAddress = "Izin lokasi diblokir permanen. Buka setting HP.";
+            _isLoadingLocation = false;
+          });
+        }
+        return;
+      }
+
+      LocationSettings locationSettings = const LocationSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 100,
+      );
+      
+      Position position = await Geolocator.getCurrentPosition(locationSettings: locationSettings);
+      final Geocoding geocoding = Geocoding();
+      // Ambil nama jalan/daerah dari koordinat
+      final List<Placemark> placemarks = await geocoding.placemarkFromCoordinates(position.latitude, position.longitude);
+      
+      if (placemarks.isNotEmpty) {
+        Placemark place = placemarks[0];
+        
+        // Gabungin data biar alamatnya lengkap
+        String fullAddress = "";
+        if (place.street != null && place.street!.isNotEmpty) fullAddress += "${place.street}, ";
+        if (place.subLocality != null && place.subLocality!.isNotEmpty) fullAddress += "${place.subLocality}, ";
+        if (place.locality != null && place.locality!.isNotEmpty) fullAddress += "${place.locality}, ";
+        if (place.administrativeArea != null) fullAddress += "${place.administrativeArea}";
+
+        if (mounted) {
+          setState(() {
+            _currentAddress = fullAddress;
+            _isLoadingLocation = false;
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint("Error Get Location: $e");
+      if (mounted) {
+        setState(() {
+          _currentAddress = "Gagal memuat alamat. Cek internet/GPS lu.";
+          _isLoadingLocation = false;
+        });
+      }
+    }
+  }
+
+  // --- FUNGSI NAVIGASI KE MAP PICKER ---
+  Future<void> _goToMapPicker() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        // Koordinat default awal (misal Monas Jakarta)
+        builder: (context) => const MapPickerPage(initialLocation: null),
+      ),
+    );
+
+    if (result != null && result is Map) {
+      setState(() {
+        _currentAddress = result['address'];
+        _isLoadingLocation = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -22,19 +136,20 @@ class DeliveryAddressPage extends StatelessWidget {
         padding: const EdgeInsets.all(24.0),
         child: Column(
           children: [
-            _buildAddressCard('Home', 'Jl. Merdeka No. 45, Jakarta Selatan', Icons.home_rounded, true),
-            const SizedBox(height: 16),
-            _buildAddressCard('Office', 'Gedung Menara Mulia Lt. 12, Sudirman', Icons.work_rounded, false),
+            // Cuma nampilin Current Location
+            _buildAddressCard(
+              'Current Location',
+              _isLoadingLocation ? 'Sedang mencari lokasi...' : _currentAddress,
+              Icons.my_location_rounded,
+              true,
+            ),
             const SizedBox(height: 24),
             
-            // Tombol Add New Map (Dummy untuk saat ini)
+            // Tombol Add New Map (Manggil Map Picker OpenStreetMap)
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
-                onPressed: () {
-                  // Nanti kalau ada Gmaps masukin logicnya di sini
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Buka fitur Maps...')));
-                },
+                onPressed: _goToMapPicker,
                 icon: const Icon(Icons.map_outlined),
                 label: const Text('Add Address via Maps'),
                 style: OutlinedButton.styleFrom(
@@ -64,7 +179,10 @@ class DeliveryAddressPage extends StatelessWidget {
         children: [
           Container(
             padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(color: Colors.grey[100], shape: BoxShape.circle),
+            decoration: BoxDecoration(
+              color: isSelected ? AppColors.primary.withOpacity(0.1) : Colors.grey[100], 
+              shape: BoxShape.circle
+            ),
             child: Icon(icon, color: isSelected ? AppColors.primary : Colors.grey[600]),
           ),
           const SizedBox(width: 16),

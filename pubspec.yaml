@@ -40,7 +40,9 @@ dependencies:
   geocoding: ^5.0.0
   speech_to_text: ^7.4.0
   image_picker: ^1.2.3
-
+  url_launcher: ^6.3.2
+  flutter_map: ^8.3.1
+  latlong2: ^0.10.1
 dev_dependencies:
   flutter_test:
     sdk: flutter

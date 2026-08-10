@@ -3,7 +3,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:restauran_app/core/theme/app_colors.dart';
 import '../../../../core/widgets/custom_button.dart';
 import '../../../../core/widgets/custom_input.dart';
-
+import '../../../admin/pages/admin_dashboard_page.dart';
+import '../../../dashboard/presentation/pages/main_dashboard_page.dart';
 class LoginPage extends StatefulWidget {
   const LoginPage({ Key? key }) : super(key: key);
 
@@ -26,7 +27,7 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
-  Future<void> _login() async {
+    Future<void> _login() async {
     setState(() {
       _isLoading = true;
     });
@@ -42,13 +43,30 @@ class _LoginPageState extends State<LoginPage> {
         return;
       }
 
-      await supabase.auth.signInWithPassword(
+      // 1. Simpan hasil auth ke dalam variabel AuthResponse
+      final AuthResponse res = await supabase.auth.signInWithPassword(
         email: email,
         password: password,
       );
 
       if (mounted) {
-        Navigator.pushReplacementNamed(context, '/dashboard');
+        // 2. Ambil data user dari variabel 'res' di atas
+        final user = res.user;
+        final role = user?.userMetadata?['role'] ?? 'customer';
+        
+        // 3. Logic navigasi (sudah bersih dari titik koma nyasar)
+        if (role == 'admin') {
+          Navigator.pushReplacement(
+            context, 
+            MaterialPageRoute(builder: (context) => const AdminDashboardPage()),
+          );
+        } else {
+          Navigator.pushReplacement(
+            context, 
+            MaterialPageRoute(builder: (context) => const MainDashboardPage()),
+          );
+        }
+        // (Navigasi '/dashboard' ganda sudah dihapus)
       }
     } on AuthException catch (error) {
       if (mounted) {

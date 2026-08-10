@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:restauran_app/core/theme/app_colors.dart'; 
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../core/services/cart_service.dart';
-import '../../../cart/cart_page.dart'; // Sesuaikan path ini kalau error
+import '../../../cart/presentation/pages/cart_page.dart'; // Sesuaikan path ini kalau error
+import 'order_tracking_page.dart';
+
 
 class OrderData {
   final String restaurantName;
@@ -391,7 +393,18 @@ class _OrderCard extends StatelessWidget {
             children: [
               Expanded(
                 child: OutlinedButton(
-                  onPressed: () {},
+                  // --- UBAH BAGIAN INI ---
+                  onPressed: () {
+                    if (data.isActive) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => OrderTrackingPage(orderData: data),
+                        ),
+                      );
+                    }
+                  },
+                  // -----------------------
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Colors.black87,
                     side: const BorderSide(color: Colors.black12),

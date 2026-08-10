@@ -8,6 +8,7 @@ import 'features/onboarding/presentation/pages/onboarding_page.dart';
 import 'features/auth/presentation/pages/login_page.dart';
 import 'features/auth/presentation/pages/regist_page.dart';
 import 'features/dashboard/presentation/pages/main_dashboard_page.dart';
+import 'features/admin/pages/admin_dashboard_page.dart'; // <-- JANGAN LUPA IMPORT ADMIN PAGE
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -38,6 +39,8 @@ class MyApp extends StatelessWidget {
       // PERUBAHAN: Pakai onGenerateRoute buat intercept perpindahan halaman
       onGenerateRoute: (settings) {
         final user = supabase.auth.currentUser;
+        // Ambil role buat dipake di bawah
+        final role = user?.userMetadata?['role'] ?? 'customer'; 
         
         // Daftar halaman yang BOLEH diakses walaupun belum login
         final isPublicRoute = settings.name == '/' || 
@@ -45,14 +48,18 @@ class MyApp extends StatelessWidget {
                               settings.name == '/login' || 
                               settings.name == '/regist';
 
-        // 1. CEK: Kalau belum login TAPI maksa masuk rute private (kayak /dashboard) -> Redirect ke Login
+        // 1. CEK: Kalau belum login TAPI maksa masuk rute private -> Redirect ke Login
         if (user == null && !isPublicRoute) {
           return MaterialPageRoute(builder: (context) => const LoginPage());
         }
 
-        // 2. CEK: Kalau UDAH login TAPI iseng buka halaman login/regist lagi -> Redirect ke Dashboard
+        // 2. CEK: Kalau UDAH login TAPI iseng buka halaman publik lagi -> Redirect sesuai ROLE
         if (user != null && (settings.name == '/login' || settings.name == '/regist' || settings.name == '/onboarding')) {
-          return MaterialPageRoute(builder: (context) => const MainDashboardPage());
+          if (role == 'admin') {
+            return MaterialPageRoute(builder: (context) => const AdminDashboardPage());
+          } else {
+            return MaterialPageRoute(builder: (context) => const MainDashboardPage());
+          }
         }
 
         // 3. Mapping rute normal kalau lolos pengecekan di atas
@@ -66,9 +73,13 @@ class MyApp extends StatelessWidget {
           case '/regist':
             return MaterialPageRoute(builder: (context) => const RegistPage());
           case '/dashboard':
-            return MaterialPageRoute(builder: (context) => const MainDashboardPage());
+            // Cek role lagi kalau dipanggil pakai pushNamed('/dashboard')
+            if (role == 'admin') {
+              return MaterialPageRoute(builder: (context) => const AdminDashboardPage());
+            } else {
+              return MaterialPageRoute(builder: (context) => const MainDashboardPage());
+            }
           default:
-            // Kalau rutenya ngaco/gak ketemu, amanin dengan kembali ke Splash
             return MaterialPageRoute(builder: (context) => const SplashPage());
         }
       },

@@ -11,6 +11,18 @@ class RevenueChartWidget extends StatelessWidget {
     this.onViewReportTap,
   }) : super(key: key);
 
+  String _formatAmount(double amount) {
+    if (amount == 0) return 'Rp 0';
+    if (amount >= 1000000) {
+      final val = amount / 1000000;
+      return 'Rp ${val % 1 == 0 ? val.toInt() : val.toStringAsFixed(1)}jt';
+    } else if (amount >= 1000) {
+      return 'Rp ${(amount / 1000).toStringAsFixed(0)}rb';
+    } else {
+      return 'Rp ${amount.toInt()}';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final maxAmount = points.fold<double>(1.0, (max, p) => p.amount > max ? p.amount : max);
@@ -70,7 +82,7 @@ class RevenueChartWidget extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.end,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    if (point.isHighlighted)
+                    if (point.isHighlighted && point.amount > 0)
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                         margin: const EdgeInsets.only(bottom: 4),
@@ -78,9 +90,9 @@ class RevenueChartWidget extends StatelessWidget {
                           color: Colors.black87,
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: const Text(
-                          'Rp 12jt',
-                          style: TextStyle(
+                        child: Text(
+                          _formatAmount(point.amount),
+                          style: const TextStyle(
                             color: Colors.white,
                             fontSize: 9,
                             fontWeight: FontWeight.bold,
@@ -93,7 +105,7 @@ class RevenueChartWidget extends StatelessWidget {
                       width: 26,
                       height: 95 * heightFactor,
                       decoration: BoxDecoration(
-                        color: point.isHighlighted
+                        color: point.isHighlighted && point.amount > 0
                             ? const Color(0xFFD83A1E)
                             : const Color(0xFFF6C8C0),
                         borderRadius: BorderRadius.circular(6),

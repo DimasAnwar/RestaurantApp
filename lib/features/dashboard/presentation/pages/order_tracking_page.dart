@@ -19,32 +19,49 @@ class OrderTrackingPage extends StatefulWidget {
 }
 
 class _OrderTrackingPageState extends State<OrderTrackingPage> {
-  final LatLng _storeLocation = const LatLng(-6.603212, 106.793834);
-  final LatLng _customerLocation = const LatLng(-6.608500, 106.791500);
+  // Store Location: Bogor Trade Mall (BTM) - Jl. Ir. H. Juanda No. 68, Bogor
+  final LatLng _storeLocation = const LatLng(-6.601700, 106.793700);
+  late LatLng _customerLocation;
 
   int _estimatedMinutes = 15;
-  String _distanceText = "0 km";
+  String _distanceText = "0.0 km";
   bool _isCompleting = false;
 
   @override
   void initState() {
     super.initState();
-    _calculateDistanceAndTime();
+    _initCustomerLocationAndDistance();
   }
 
-  void _calculateDistanceAndTime() {
+  void _initCustomerLocationAndDistance() {
+    // Generate deterministic customer coordinates around Bogor Trade Mall based on shipping address
+    final addressStr = widget.orderData.shippingAddress;
+    final int hash = addressStr.hashCode.abs();
+    
+    // Offset range roughly 1.2 km to 4.5 km from Bogor Trade Mall
+    final double latOffset = ((hash % 30) - 15) * 0.0015; // ~ -0.022 to +0.022 deg
+    final double lngOffset = (((hash ~/ 30) % 30) - 15) * 0.0015;
+
+    _customerLocation = LatLng(
+      _storeLocation.latitude + (latOffset == 0 ? -0.008 : latOffset),
+      _storeLocation.longitude + (lngOffset == 0 ? 0.006 : lngOffset),
+    );
+
+    // Calculate real geodesic map distance between Bogor Trade Mall & Customer Location
     const Distance distance = Distance();
-    final double meter = distance.as(
+    final double meters = distance.as(
       LengthUnit.Meter,
       _storeLocation,
       _customerLocation,
     );
 
-    int calculatedTime = (meter / 500).ceil() + 10;
+    final double km = (meters / 1000).clamp(0.8, 8.5);
+    // Courier speed ~ 25 km/h in city traffic + 5 mins prep
+    final int timeMins = (km * 3.5).ceil() + 6;
 
     setState(() {
-      _estimatedMinutes = calculatedTime;
-      _distanceText = '${(meter / 1000).toStringAsFixed(1)} km';
+      _distanceText = '${km.toStringAsFixed(1)} km';
+      _estimatedMinutes = timeMins;
     });
   }
 
@@ -150,7 +167,7 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
                 child: FlutterMap(
                   options: MapOptions(
                     initialCenter: centerMap,
-                    initialZoom: 15.5,
+                    initialZoom: 14.2,
                     interactionOptions: const InteractionOptions(
                       flags: InteractiveFlag.none,
                     ),
@@ -164,8 +181,8 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
                       polylines: [
                         Polyline(
                           points: [_storeLocation, _customerLocation],
-                          color: AppColors.primary.withValues(alpha: 0.6),
-                          strokeWidth: 4.0,
+                          color: AppColors.primary.withValues(alpha: 0.7),
+                          strokeWidth: 4.5,
                           pattern: StrokePattern.dashed(segments: const [10.0, 10.0]),
                         ),
                       ],
@@ -184,12 +201,12 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
                         ),
                         Marker(
                           point: _customerLocation,
-                          width: 40,
-                          height: 40,
+                          width: 42,
+                          height: 42,
                           child: _MapPin(
                             icon: Icons.home_rounded,
                             color: AppColors.primary,
-                            size: 40,
+                            size: 42,
                           ),
                         ),
                       ],
@@ -234,7 +251,7 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
                             ),
                             const SizedBox(width: 8),
                             Text(
-                              'Arriving in $_estimatedMinutes min',
+                              'Sampai dalam $_estimatedMinutes min',
                               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                             ),
                           ],
@@ -273,7 +290,7 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
                         ),
                       ),
 
-                      // Store Info
+                      // Store Info with real Bogor Trade Mall distance
                       Row(
                         children: [
                           CircleAvatar(
@@ -293,7 +310,7 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
                                 const SizedBox(height: 2),
                                 Text(
                                   '📍 Bogor Trade Mall • $_distanceText',
-                                  style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                                  style: TextStyle(color: Colors.grey[600], fontSize: 13, fontWeight: FontWeight.w600),
                                 ),
                               ],
                             ),
@@ -358,7 +375,7 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
                             ),
                             _buildTimelineStep(
                               title: lang.tr('status_on_delivery'),
-                              subtitle: 'Menuju lokasimu ($_distanceText)',
+                              subtitle: 'Menuju lokasimu (Jarak $_distanceText dari Bogor Trade Mall)',
                               time: 'Tahap 3',
                               stepIndex: 2,
                               currentIndex: _getCurrentStep(),

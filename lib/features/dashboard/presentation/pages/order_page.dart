@@ -70,6 +70,7 @@ class _OrderPageState extends State<OrderPage> {
           buttonText: isActive ? lang.tr('track_order') : lang.tr('reorder'),
           hasStarButton: !isActive,
           rawItems: items,
+          shippingAddress: json['alamat_pengiriman']?.toString() ?? 'Jl. Pajajaran No. 45, Bogor',
         );
 
         if (isActive) {

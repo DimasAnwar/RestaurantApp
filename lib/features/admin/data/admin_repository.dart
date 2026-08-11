@@ -167,9 +167,9 @@ class AdminRepository {
   /// Helper Courier Info Generator for Shipped orders
   CourierInfo getCourierForOrder(int index) {
     final couriers = [
-      CourierInfo(name: 'Marcus T.', avatarUrl: 'assets/images/user1.jpg', rating: 4.9, vehicle: 'Bicycle'),
-      CourierInfo(name: 'Sarah J.', avatarUrl: 'assets/images/user2.jpg', rating: 4.7, vehicle: 'Scooter'),
-      CourierInfo(name: 'David K.', avatarUrl: 'assets/images/user3.jpg', rating: 4.8, vehicle: 'Motorcycle'),
+      CourierInfo(name: 'Magic Food Driver (Marcus T.)', avatarUrl: 'assets/images/user1.jpg', rating: 4.9, vehicle: 'Motorcycle'),
+      CourierInfo(name: 'Magic Food Driver (Sarah J.)', avatarUrl: 'assets/images/user2.jpg', rating: 4.8, vehicle: 'Scooter'),
+      CourierInfo(name: 'Magic Food Driver (David K.)', avatarUrl: 'assets/images/user3.jpg', rating: 4.7, vehicle: 'Motorcycle'),
     ];
     return couriers[index % couriers.length];
   }

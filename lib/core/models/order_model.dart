@@ -12,6 +12,7 @@ class OrderData {
   final String buttonText;
   final bool hasStarButton;
   final List<dynamic> rawItems;
+  final String shippingAddress;
 
   OrderData({
     required this.dbOrderId,
@@ -27,5 +28,6 @@ class OrderData {
     required this.buttonText,
     this.hasStarButton = false,
     this.rawItems = const [],
+    this.shippingAddress = 'Jl. Pajajaran No. 45, Bogor',
   });
 }

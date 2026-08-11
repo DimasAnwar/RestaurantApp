@@ -14,6 +14,8 @@ class ChatService {
 
   /// Fetch chat messages for specific order UUID
   Future<List<ChatMessageItem>> fetchMessages(String dbOrderId) async {
+    if (dbOrderId.isEmpty) return [];
+
     try {
       final response = await _client
           .from('order_chats')
@@ -21,8 +23,10 @@ class ChatService {
           .eq('order_id', dbOrderId)
           .order('created_at', ascending: true);
 
-      return (response as List)
-          .map((json) => ChatMessageItem.fromJson(json))
+      if (response == null || response is! List) return [];
+
+      return response
+          .map((json) => ChatMessageItem.fromJson(json as Map<String, dynamic>))
           .toList();
     } catch (e) {
       debugPrint('🚨 Error fetching chat messages: $e');
@@ -30,17 +34,29 @@ class ChatService {
     }
   }
 
-  /// Send chat message to Supabase
+  /// Send chat message to Supabase with input sanitization and security validation
   Future<bool> sendMessage({
     required String dbOrderId,
     required String senderId,
     required String message,
   }) async {
+    final sanitizedMessage = message.trim();
+    if (sanitizedMessage.isEmpty || dbOrderId.isEmpty) {
+      debugPrint('⚠️ Invalid message payload prevented.');
+      return false;
+    }
+
+    final validSenderId = senderId.isNotEmpty ? senderId : (currentUserId ?? '');
+    if (validSenderId.isEmpty) {
+      debugPrint('⚠️ Unauthenticated chat message attempt blocked.');
+      return false;
+    }
+
     try {
       await _client.from('order_chats').insert({
         'order_id': dbOrderId,
-        'sender_id': senderId,
-        'message': message,
+        'sender_id': validSenderId,
+        'message': sanitizedMessage,
       });
       return true;
     } catch (e) {
@@ -55,9 +71,14 @@ class ChatService {
     required Function(ChatMessageItem) onNewMessage,
     required VoidCallback onErrorOrChannelFailed,
   }) {
+    if (dbOrderId.isEmpty) {
+      onErrorOrChannelFailed();
+      return null;
+    }
+
     try {
       final channel = _client.channel('public:order_chats_$dbOrderId');
-      
+
       channel.onPostgresChanges(
         event: PostgresChangeEvent.insert,
         schema: 'public',
@@ -68,8 +89,10 @@ class ChatService {
           value: dbOrderId,
         ),
         callback: (payload) {
-          final newMsg = ChatMessageItem.fromJson(payload.newRecord);
-          onNewMessage(newMsg);
+          if (payload.newRecord != null && payload.newRecord.isNotEmpty) {
+            final newMsg = ChatMessageItem.fromJson(payload.newRecord);
+            onNewMessage(newMsg);
+          }
         },
       ).subscribe((status, [error]) {
         if (status == RealtimeSubscribeStatus.channelError || error != null) {

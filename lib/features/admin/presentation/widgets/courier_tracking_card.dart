@@ -98,8 +98,8 @@ class CourierTrackingCard extends StatelessWidget {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.baseline,
                 textBaseline: TextBaseline.alphabetic,
-                children: const [
-                  Text(
+                children: [
+                  const Text(
                     '2',
                     style: TextStyle(
                       fontWeight: FontWeight.w900,
@@ -107,8 +107,8 @@ class CourierTrackingCard extends StatelessWidget {
                       color: Colors.black87,
                     ),
                   ),
-                  SizedBox(width: 3),
-                  Text(
+                  const SizedBox(width: 3),
+                  const Text(
                     'min',
                     style: TextStyle(
                       color: Color(0xFFD83A1E),
@@ -209,11 +209,10 @@ class CourierTrackingCard extends StatelessWidget {
           // Courier Profile & Action Buttons
           Row(
             children: [
-              CircleAvatar(
+              const CircleAvatar(
                 radius: 20,
-                backgroundColor: Colors.grey.shade300,
-                backgroundImage: const AssetImage('assets/images/user2.jpg'),
-                child: const Icon(Icons.person, color: Colors.white),
+                backgroundColor: Color(0xFFFDE8E4),
+                child: Icon(Icons.person_rounded, color: Color(0xFFD83A1E), size: 22),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -224,9 +223,11 @@ class CourierTrackingCard extends StatelessWidget {
                       courier.name,
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
-                        fontSize: 14,
+                        fontSize: 13,
                         color: Colors.black87,
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 2),
                     Row(

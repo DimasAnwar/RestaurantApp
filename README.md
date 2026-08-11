@@ -38,6 +38,20 @@ Magic Food is a comprehensive, production-grade restaurant management and food o
 
 ---
 
+## Application Screenshots
+
+### Customer Application Interface
+| Homepage & Recommendations | Menu Catalog & Search | Order Tracking & Map (BTM) |
+| :---: | :---: | :---: |
+| <img src="assets/screenshots/home.png" width="260" alt="Customer Homepage" /> | <img src="assets/screenshots/search.png" width="260" alt="Menu Search Catalog" /> | <img src="assets/screenshots/tracking.png" width="260" alt="Order Tracking Map" /> |
+
+### Administrator Dashboard ("Magic Food Admin")
+| Orders Management & Driver Dispatch | Real-Time Financial Analytics |
+| :---: | :---: |
+| <img src="assets/screenshots/admin_orders.png" width="340" alt="Admin Orders Dispatch" /> | <img src="assets/screenshots/admin_financials.png" width="340" alt="Admin Financial Analytics" /> |
+
+---
+
 ## System Architecture & Directory Structure
 
 The repository follows standard Clean Architecture principles to ensure maintainability, scalability, and code separation.

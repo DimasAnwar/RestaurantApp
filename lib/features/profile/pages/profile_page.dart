@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:restauran_app/core/theme/app_colors.dart';
+import 'package:restauran_app/core/services/language_service.dart';
+import 'package:restauran_app/core/services/notification_service.dart';
+import 'package:restauran_app/core/widgets/animated_touchable.dart';
+import 'package:restauran_app/features/profile/pages/notifications_page.dart';
 
-// Import model & widgets yang barusan dipisah
 import '../models/profile_models.dart';
 import '../widgets/profile_header.dart';
 import '../widgets/points_card.dart';
@@ -11,8 +14,8 @@ import '../widgets/rewards_section.dart';
 import '../widgets/menu_section.dart';
 
 class ProfilePage extends StatefulWidget {
-  final Function(int)? onSwitchTab; 
-  
+  final Function(int)? onSwitchTab;
+
   const ProfilePage({Key? key, this.onSwitchTab}) : super(key: key);
 
   @override
@@ -21,7 +24,8 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage> {
   String _userName = 'User';
-  String _profileImageUrl = 'assets/images/sate.jpg'; // Default lokal
+  String _profileImageUrl = 'assets/images/sate.jpg';
+  int _userPoints = 0;
   bool _isUploading = false;
 
   @override
@@ -38,11 +42,11 @@ class _ProfilePageState extends State<ProfilePage> {
         if (user.userMetadata?['avatar_url'] != null) {
           _profileImageUrl = user.userMetadata?['avatar_url'];
         }
+        _userPoints = (user.userMetadata?['points'] as num?)?.toInt() ?? 0;
       });
     }
   }
 
-  // --- FUNGSI UPLOAD FOTO PROFIL KE BUCKET SUPABASE ---
   Future<void> _uploadProfileImage() async {
     try {
       final picker = ImagePicker();
@@ -62,17 +66,14 @@ class _ProfilePageState extends State<ProfilePage> {
         const SnackBar(content: Text('Mengunggah gambar...'), duration: Duration(seconds: 1)),
       );
 
-      // Upload ke bucket 'users_profile'
       await Supabase.instance.client.storage
           .from('users_profile')
           .uploadBinary(fileName, bytes);
 
-      // Ambil public URL-nya
       final publicUrl = Supabase.instance.client.storage
           .from('users_profile')
           .getPublicUrl(fileName);
 
-      // Update metadata user
       await Supabase.instance.client.auth.updateUser(
         UserAttributes(data: {'avatar_url': publicUrl}),
       );
@@ -81,79 +82,125 @@ class _ProfilePageState extends State<ProfilePage> {
         _profileImageUrl = publicUrl;
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Foto profil berhasil diperbarui!'), backgroundColor: Colors.green),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Foto profil berhasil diperbarui!'), backgroundColor: Colors.green),
+        );
+      }
     } catch (e) {
       debugPrint('Error upload: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Gagal mengunggah foto.'), backgroundColor: Colors.red),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Gagal mengunggah foto.'), backgroundColor: Colors.red),
+        );
+      }
     } finally {
-      setState(() => _isUploading = false);
+      if (mounted) setState(() => _isUploading = false);
+    }
+  }
+
+  // Helper tier calculation
+  Map<String, dynamic> _calculateTier(int points) {
+    if (points < 100) {
+      return {'tier': 'NEW MEMBER', 'pointsToNext': 100 - points, 'nextTier': 'Bronze'};
+    } else if (points < 500) {
+      return {'tier': 'BRONZE MEMBER', 'pointsToNext': 500 - points, 'nextTier': 'Silver'};
+    } else if (points < 1500) {
+      return {'tier': 'SILVER MEMBER', 'pointsToNext': 1500 - points, 'nextTier': 'Gold VIP'};
+    } else {
+      return {'tier': 'GOLD VIP', 'pointsToNext': 0, 'nextTier': 'Max Tier'};
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final lang = LanguageService.instance;
+    final notifService = NotificationService.instance;
+    final tierInfo = _calculateTier(_userPoints);
+
     final currentUserData = UserProfile(
       name: _userName,
-      tier: 'NEW MEMBER', 
+      tier: tierInfo['tier'],
       imageUrl: _profileImageUrl,
-      availablePoints: 0, 
-      pointsToNextTier: 100, 
-      nextTierName: 'Silver', 
+      availablePoints: _userPoints,
+      pointsToNextTier: tierInfo['pointsToNext'],
+      nextTierName: tierInfo['nextTier'],
     );
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFFAF8F5),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 20),
-              const _ProfileAppBar(),
-              const SizedBox(height: 30),
-              ProfileHeader(
-                user: currentUserData, 
-                isUploading: _isUploading,
-                onEditImage: _uploadProfileImage,
+    return ListenableBuilder(
+      listenable: Listenable.merge([lang, notifService]),
+      builder: (context, _) {
+        return Scaffold(
+          backgroundColor: const Color(0xFFFAF8F5),
+          body: SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 20),
+                  _ProfileAppBar(
+                    title: lang.tr('profile'),
+                    unreadNotifCount: notifService.unreadCount,
+                    onOpenNotif: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const NotificationsPage()),
+                      ).then((_) => _getUserData());
+                    },
+                  ),
+                  const SizedBox(height: 30),
+                  ProfileHeader(
+                    user: currentUserData,
+                    isUploading: _isUploading,
+                    onEditImage: _uploadProfileImage,
+                  ),
+                  const SizedBox(height: 30),
+                  PointsCard(user: currentUserData),
+                  const SizedBox(height: 30),
+                  const RewardsSection(),
+                  const SizedBox(height: 30),
+                  MenuSection(onSwitchTab: widget.onSwitchTab),
+                  const SizedBox(height: 30),
+                ],
               ),
-              const SizedBox(height: 30),
-              PointsCard(user: currentUserData),
-              const SizedBox(height: 30),
-              const RewardsSection(),
-              const SizedBox(height: 30),
-              MenuSection(onSwitchTab: widget.onSwitchTab),
-              const SizedBox(height: 30),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
 
-// Komponen kecil dibiarin di sini biar ga terlalu banyak file
 class _ProfileAppBar extends StatelessWidget {
-  const _ProfileAppBar({Key? key}) : super(key: key);
+  final String title;
+  final int unreadNotifCount;
+  final VoidCallback onOpenNotif;
+
+  const _ProfileAppBar({
+    Key? key,
+    required this.title,
+    required this.unreadNotifCount,
+    required this.onOpenNotif,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        const Text(
-          'Profile',
-          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF8D4B3F)),
+        Text(
+          title,
+          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF8D4B3F)),
         ),
-        IconButton(
-          onPressed: () {},
-          icon: Icon(Icons.notifications_none_rounded, color: AppColors.primary, size: 28),
-          padding: EdgeInsets.zero,
-          constraints: const BoxConstraints(),
+        AnimatedTouchable(
+          onTap: onOpenNotif,
+          child: Badge(
+            isLabelVisible: unreadNotifCount > 0,
+            label: Text(unreadNotifCount.toString(), style: const TextStyle(color: Colors.white, fontSize: 10)),
+            backgroundColor: Colors.red,
+            child: Icon(Icons.notifications_none_rounded, color: AppColors.primary, size: 28),
+          ),
         ),
       ],
     );

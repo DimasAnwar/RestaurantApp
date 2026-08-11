@@ -82,6 +82,16 @@ lib/
 
 The backend relies on PostgreSQL hosted on Supabase:
 
+### `menu_items` Table
+- `id` (int8, Primary Key)
+- `nama` (text)
+- `kategori` (varchar)
+- `harga` (int4)
+- `lama_pembuatan_menit` (int4)
+- `rating` (numeric)
+- `image_url` (text)
+- `created_at` (timestamptz)
+
 ### `orders` Table
 - `id` (uuid, Primary Key)
 - `user_id` (uuid, Foreign Key -> auth.users.id)
@@ -110,6 +120,11 @@ The backend relies on PostgreSQL hosted on Supabase:
 ---
 
 ## Getting Started
+
+### Default Administrator Credentials
+- **Email**: `admin@gmail.com`
+- **Password**: `123456`
+- **Role**: `ADMIN`
 
 ### Prerequisites
 - Flutter SDK (version 3.19.0 or higher)

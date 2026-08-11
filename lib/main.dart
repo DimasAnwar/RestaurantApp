@@ -3,8 +3,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'core/theme/app_theme.dart';
-import 'core/services/language_service.dart';
-import 'core/services/notification_service.dart';
 import 'features/splash/presentation/pages/splash_page.dart';
 import 'features/onboarding/presentation/pages/onboarding_page.dart';
 import 'features/auth/presentation/pages/login_page.dart';
@@ -22,10 +20,6 @@ void main() async {
     publishableKey: dotenv.env['SUPABASE_ANON_KEY'] ?? '',
   );
 
-  // Inisialisasi service bahasa & notifikasi
-  await LanguageService.instance.init();
-  await NotificationService.instance.init();
-
   runApp(const MyApp());
 }
 
@@ -36,56 +30,72 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: LanguageService.instance,
-      builder: (context, _) {
-        return MaterialApp(
-          debugShowCheckedModeBanner: false,
-          title: 'RestaurantApp',
-          initialRoute: '/',
-          theme: AppTheme.lightTheme,
-          onGenerateRoute: (settings) {
-            final user = supabase.auth.currentUser;
-            final role = user?.userMetadata?['role'] ?? 'customer';
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: 'FoodApp',
+      initialRoute: '/',
+      theme: AppTheme.lightTheme,
 
-            final isPublicRoute = settings.name == '/' ||
-                settings.name == '/onboarding' ||
-                settings.name == '/login' ||
-                settings.name == '/regist';
+      // PERUBAHAN: Pakai onGenerateRoute buat intercept perpindahan halaman
+      onGenerateRoute: (settings) {
+        final user = supabase.auth.currentUser;
+        // Ambil role buat dipake di bawah
+        final role = user?.userMetadata?['role'] ?? 'customer';
 
-            if (user == null && !isPublicRoute) {
-              return MaterialPageRoute(builder: (context) => const LoginPage());
+        // Daftar halaman yang BOLEH diakses walaupun belum login
+        final isPublicRoute =
+            settings.name == '/' ||
+            settings.name == '/onboarding' ||
+            settings.name == '/login' ||
+            settings.name == '/regist';
+
+        // 1. CEK: Kalau belum login TAPI maksa masuk rute private -> Redirect ke Login
+        if (user == null && !isPublicRoute) {
+          return MaterialPageRoute(builder: (context) => const LoginPage());
+        }
+
+        // 2. CEK: Kalau UDAH login TAPI iseng buka halaman publik lagi -> Redirect sesuai ROLE
+        if (user != null &&
+            (settings.name == '/login' ||
+                settings.name == '/regist' ||
+                settings.name == '/onboarding')) {
+          if (role == 'admin') {
+            return MaterialPageRoute(
+              builder: (context) => const AdminDashboardPage(),
+            );
+          } else {
+            return MaterialPageRoute(
+              builder: (context) => const MainDashboardPage(),
+            );
+          }
+        }
+
+        // 3. Mapping rute normal kalau lolos pengecekan di atas
+        switch (settings.name) {
+          case '/':
+            return MaterialPageRoute(builder: (context) => const SplashPage());
+          case '/onboarding':
+            return MaterialPageRoute(
+              builder: (context) => const OnboardingPage(),
+            );
+          case '/login':
+            return MaterialPageRoute(builder: (context) => const LoginPage());
+          case '/regist':
+            return MaterialPageRoute(builder: (context) => const RegistPage());
+          case '/dashboard':
+            // Cek role lagi kalau dipanggil pakai pushNamed('/dashboard')
+            if (role == 'admin') {
+              return MaterialPageRoute(
+                builder: (context) => const AdminDashboardPage(),
+              );
+            } else {
+              return MaterialPageRoute(
+                builder: (context) => const MainDashboardPage(),
+              );
             }
-
-            if (user != null &&
-                (settings.name == '/login' || settings.name == '/regist' || settings.name == '/onboarding')) {
-              if (role == 'admin') {
-                return MaterialPageRoute(builder: (context) => const AdminDashboardPage());
-              } else {
-                return MaterialPageRoute(builder: (context) => const MainDashboardPage());
-              }
-            }
-
-            switch (settings.name) {
-              case '/':
-                return MaterialPageRoute(builder: (context) => const SplashPage());
-              case '/onboarding':
-                return MaterialPageRoute(builder: (context) => const OnboardingPage());
-              case '/login':
-                return MaterialPageRoute(builder: (context) => const LoginPage());
-              case '/regist':
-                return MaterialPageRoute(builder: (context) => const RegistPage());
-              case '/dashboard':
-                if (role == 'admin') {
-                  return MaterialPageRoute(builder: (context) => const AdminDashboardPage());
-                } else {
-                  return MaterialPageRoute(builder: (context) => const MainDashboardPage());
-                }
-              default:
-                return MaterialPageRoute(builder: (context) => const SplashPage());
-            }
-          },
-        );
+          default:
+            return MaterialPageRoute(builder: (context) => const SplashPage());
+        }
       },
     );
   }
